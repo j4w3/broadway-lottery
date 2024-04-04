@@ -27,7 +27,7 @@ jobs:
           DOB_MONTH: ${{ secrets.DOB_MONTH_P2 }}
           DOB_DAY: ${{ secrets.DOB_DAY_P2 }}
           DOB_YEAR: ${{ secrets.DOB_YEAR_P2 }}
-          ZIP: ${{ secrets.ZIP }}
+          ZIP: ${{ secrets.ZIP_P2 }}
           COUNTRY: ${{ secrets.COUNTRY }}
         run: xvfb-run npx playwright test
       - uses: actions/upload-artifact@v3
