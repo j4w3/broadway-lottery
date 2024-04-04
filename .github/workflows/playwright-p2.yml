@@ -1,0 +1,38 @@
+name: Playwright P2 Tests
+on:
+  schedule:
+    # Run every day at 14:28 UTC
+    - cron: "28 14 * * *"
+  workflow_dispatch: # This line allows manual triggering of the workflow
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        env:
+          FIRST_NAME: ${{ secrets.FIRST_NAME_P2 }}
+          LAST_NAME: ${{ secrets.LAST_NAME_P2 }}
+          NUMBER_OF_TICKETS: ${{ secrets.NUMBER_OF_TICKETS }}
+          EMAIL: ${{ secrets.EMAIL_P2 }}
+          DOB_MONTH: ${{ secrets.DOB_MONTH_P2 }}
+          DOB_DAY: ${{ secrets.DOB_DAY_P2 }}
+          DOB_YEAR: ${{ secrets.DOB_YEAR_P2 }}
+          ZIP: ${{ secrets.ZIP }}
+          COUNTRY: ${{ secrets.COUNTRY }}
+        run: xvfb-run npx playwright test
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
