@@ -1,4 +1,8 @@
 export async function broadwayDirect({ browser, userInfo, url }) {
+  const browser = await chromium.launch({ headless: false });
+  const context = await browser.newContext({ javaScriptEnabled: false }); // Disable JavaScript
+  const page = await context.newPage();
+  
   const page = await browser.newPage();
 
   console.log(`Navigating to URL: ${url}`);
