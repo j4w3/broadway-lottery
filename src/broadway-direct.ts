@@ -10,9 +10,22 @@ export async function broadwayDirect({ browser, userInfo, url }) {
 
   console.log("Extracting href attributes from links");
   const hrefs = await Promise.all(
-    links.map((link) => {
+    links.map((link, index) => {
       return link.getAttribute("href").then(href => {
-        console.log(`Href: ${href}`);
+        console.log(`Link ${index} href before any interaction: ${href}`);
+        return href;
+      });
+    })
+  );
+  
+  // Additional delay to allow for any JavaScript manipulation of hrefs
+  await page.waitForTimeout(2000); // Wait for 2 seconds
+  
+  // Check href attributes again after a delay
+  const hrefsAfterDelay = await Promise.all(
+    links.map((link, index) => {
+      return link.getAttribute("href").then(href => {
+        console.log(`Link ${index} href after delay: ${href}`);
         return href;
       });
     })
