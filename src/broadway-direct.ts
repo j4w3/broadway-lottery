@@ -18,16 +18,16 @@ export async function broadwayDirect({ browser, userInfo, url }) {
     })
   );
 
+  if (url.includes('aladdin')) {
+    href[0] = 'https://lottery.broadwaydirect.com/enter-lottery/?lottery=774351&window=popup';
+    console.log('Link replaced');
+  }
+  
   for (let i = 0; i < hrefs.length; i++) {
     const href = hrefs[i];
     if (!href) {
       console.log("No href found, skipping this link.");
       continue;
-    }
-
-    if (href.includes('aladdin')) {
-      href = 'https://lottery.broadwaydirect.com/enter-lottery/?lottery=774351&window=popup'
-      console.log('Link replaced');
     }
     
     console.log(`Navigating to href: ${href}`);
