@@ -1,8 +1,4 @@
 export async function broadwayDirect({ browser, userInfo, url }) {
-  const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext({ javaScriptEnabled: false }); // Disable JavaScript
-  const page = await context.newPage();
-  
   const page = await browser.newPage();
 
   console.log(`Navigating to URL: ${url}`);
@@ -21,19 +17,6 @@ export async function broadwayDirect({ browser, userInfo, url }) {
       });
     })
   );
-  
-  // Additional delay to allow for any JavaScript manipulation of hrefs
-  await page.waitForTimeout(2000); // Wait for 2 seconds
-  
-  // Check href attributes again after a delay
-  const hrefsAfterDelay = await Promise.all(
-    links.map((link, index) => {
-      return link.getAttribute("href").then(href => {
-        console.log(`Link ${index} href after delay: ${href}`);
-        return href;
-      });
-    })
-  );
 
   for (let i = 0; i < hrefs.length; i++) {
     const href = hrefs[i];
@@ -41,6 +24,12 @@ export async function broadwayDirect({ browser, userInfo, url }) {
       console.log("No href found, skipping this link.");
       continue;
     }
+
+    if href.includes('aladdin')) {
+      href = 'https://lottery.broadwaydirect.com/enter-lottery/?lottery=774351&window=popup'
+      console.log('Link replaced');
+    }
+    
     console.log(`Navigating to href: ${href}`);
     await page.goto(href);
 
