@@ -30,7 +30,7 @@ jobs:
           ZIP: ${{ secrets.ZIP_P2 }}
           COUNTRY: ${{ secrets.COUNTRY }}
         run: xvfb-run npx playwright test
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         if: always()
         with:
           name: playwright-report
