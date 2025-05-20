@@ -8,15 +8,17 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    # Changed to ubuntu-22.04 for better Playwright compatibility
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4 # Updated to v4
+      - uses: actions/setup-node@v4  # Updated to v4
         with:
           node-version: '18'
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright Browsers
+        # This command should now work on ubuntu-22.04
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         env:
@@ -29,6 +31,7 @@ jobs:
           DOB_YEAR: ${{ secrets.DOB_YEAR }}
           ZIP: ${{ secrets.ZIP }}
           COUNTRY: ${{ secrets.COUNTRY }}
+        # xvfb-run is used to run browser tests in a headless environment
         run: xvfb-run npx playwright test
       - uses: actions/upload-artifact@v4
         if: always()
@@ -36,11 +39,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
-  keepalive-job:
-    name: Keepalive Workflow
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: gautamkrishnar/keepalive-workflow@v2
