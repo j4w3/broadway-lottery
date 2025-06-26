@@ -1,45 +1,10 @@
-# Broadway Lottery - Enhanced Edition 🎭
+# Broadway Lottery 🎭
 
-> **Enhanced fork** with advanced retry logic, form validation, and comprehensive error handling
+Automated entry system that runs daily via GitHub Actions.
 
-An automated system for entering Broadway musical lottery tickets on the Broadway Direct website. This enhanced version adds production-ready reliability, debugging features, and configurable error handling to the [original concept](https://github.com/uzv2013/broadway-lottery).
+> **For personal use only**
 
-## ✨ What's New in This Enhanced Version
-
-### 🔄 **Retry Logic & Resilience**
-- **Automatic retries**: Failed operations retry up to 2 times with exponential backoff
-- **Individual failure isolation**: One failed entry doesn't stop processing others
-- **Configurable timeouts**: Customizable page and navigation timeouts
-- **Form validation**: Validates required elements exist before filling
-
-### 📸 **Advanced Debugging**
-- **Screenshot capture**: Automatic screenshots at key points (landing, form, pre-submit, errors)
-- **Enhanced logging**: Real-time progress updates and detailed error reporting
-- **Success tracking**: Success/failure summaries with success rate calculations
-- **GitHub Actions artifacts**: Screenshots uploaded and available for 30 days
-
-### ⚙️ **Configuration Management**
-- **Environment variables**: Configurable retry counts, timeouts, and delays
-- **Advanced settings**: Fine-tune behavior without code changes
-- **Dry run mode**: Test form filling without actual submission
-
-### 🛡️ **Production Ready**
-- **Error handling**: Comprehensive error capture and recovery
-- **Clean architecture**: Modular design with separation of concerns
-- **Professional logging**: Structured output with emojis and status indicators
-
-## 📊 Feature Comparison
-
-| Feature | Original | Enhanced Version |
-|---------|----------|------------------|
-| Basic form filling | ✅ | ✅ |
-| Retry logic | ❌ | ✅ (Configurable) |
-| Error handling | Basic | ✅ Advanced |
-| Screenshot debugging | ❌ | ✅ Full capture |
-| Success tracking | ❌ | ✅ With rates |
-| Configuration options | ❌ | ✅ Extensive |
-| Form validation | ❌ | ✅ Pre-fill checks |
-| Individual failure isolation | ❌ | ✅ Continue on error |
+Based on the original [broadway-lottery](https://github.com/uzv2013/broadway-lottery) concept.
 
 ## 🚀 Quick Start
 
@@ -85,16 +50,7 @@ DRY_RUN=true                # Fill forms but don't submit (for testing)
 
 ## 🎯 How It Works
 
-1. **Lottery Detection**: Scans Broadway Direct for open lotteries
-2. **Form Processing**: Validates and fills entry forms with your information
-3. **Smart Submission**: Handles errors gracefully with retry logic
-4. **Results Tracking**: Logs success/failure rates for each show
-5. **Screenshot Capture**: Documents the entire process for debugging
-
-### Scheduled Execution
-- **Runs**: ~11 AM EST daily via GitHub Actions
-- **Results**: Usually available ~3 PM EST
-- **Artifacts**: Screenshots and logs available for 30 days
+The system runs automatically via GitHub Actions on a daily schedule.
 
 ## 🛠️ Development
 
@@ -122,54 +78,16 @@ const showUrls = [
 
 ## 🔍 Troubleshooting
 
-### Common Issues
-
-**No screenshots in artifacts?**
-- Check GitHub Actions artifacts section after test completion
-- Screenshots are only captured when lotteries are open or errors occur
-
-**Form filling fails?**
-- Enable `DRY_RUN=true` to test without submission
-- Check screenshots for form structure changes
-- Verify all required secrets are set
-
-**High failure rates?**
-- Increase `MAX_RETRIES` for unstable networks
-- Adjust `PAGE_TIMEOUT` for slower loading
-- Check if Broadway Direct has updated their form structure
-
-### Debugging Steps
-1. **Check logs**: Review GitHub Actions output for detailed error messages
-2. **Review screenshots**: Download artifacts to see exact failure points
-3. **Test locally**: Run with `DRY_RUN=true` to validate form detection
-4. **Update selectors**: If forms change, selectors may need updates
-
-## 📈 Success Monitoring
-
-The enhanced version provides detailed success tracking:
-
-```
-📊 WICKED SUMMARY:
-   ✅ Successful: 2/2
-   ❌ Failed: 0/2
-   📈 Success Rate: 100%
-```
-
-Monitor your success rates and adjust configuration as needed for optimal performance.
+Check GitHub Actions logs and artifacts for debugging information.
 
 ## 🤝 Attribution
 
-This enhanced version builds upon the original Broadway lottery automation concept. Special thanks to the original creators for the foundational idea.
-
 - **Original concept**: [uzv2013/broadway-lottery](https://github.com/uzv2013/broadway-lottery)
-- **Enhanced by**: [j4w3](https://github.com/j4w3) with production-ready improvements
+- **Enhanced by**: [j4w3](https://github.com/j4w3)
 
-## ⚠️ Responsible Use
+## ⚠️ Important
 
-- Use this automation responsibly and in accordance with Broadway Direct's terms of service
-- Don't run multiple instances or abuse the system
-- Respect rate limits and implement appropriate delays
-- This tool is for personal use only
+This tool is for personal use only. Use responsibly.
 
 ## 📄 License
 
