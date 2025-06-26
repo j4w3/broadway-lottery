@@ -27,6 +27,31 @@ function getRandomDelay(): number {
   return Math.floor(Math.random() * (CONFIG.MAX_DELAY - CONFIG.MIN_DELAY + 1)) + CONFIG.MIN_DELAY;
 }
 
+// Human-like typing with random delays
+async function humanLikeType(page: Page, selector: string, text: string): Promise<void> {
+  const element = page.locator(selector);
+  await element.click();
+  await page.waitForTimeout(100 + Math.random() * 200); // Random delay
+  
+  // Type with human-like pace
+  for (const char of text) {
+    await element.type(char);
+    await page.waitForTimeout(50 + Math.random() * 100);
+  }
+}
+
+// Add random mouse movements for more human-like behavior
+async function addHumanBehavior(page: Page): Promise<void> {
+  // Random viewport movements
+  const viewport = page.viewportSize();
+  if (viewport) {
+    const x = Math.floor(Math.random() * viewport.width);
+    const y = Math.floor(Math.random() * viewport.height);
+    await page.mouse.move(x, y);
+    await page.waitForTimeout(100 + Math.random() * 300);
+  }
+}
+
 // Utility function to retry operations
 async function retryOperation<T>(
   operation: () => Promise<T>,
@@ -213,43 +238,67 @@ export async function broadwayDirect({
             formElements.email.waitFor({ timeout: 5000 })
           ]);
 
-          // Fill out the form with delays
+          // Add human-like behavior before filling form
+          await addHumanBehavior(page);
+          
+          // Fill out the form with human-like typing and random delays
+          await formElements.firstName.click();
+          await page.waitForTimeout(200 + Math.random() * 300);
           await formElements.firstName.fill(userInfo.firstName);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(300 + Math.random() * 500);
           
+          await formElements.lastName.click();
+          await page.waitForTimeout(150 + Math.random() * 250);
           await formElements.lastName.fill(userInfo.lastName);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(200 + Math.random() * 400);
           
+          await formElements.tickets.click();
+          await page.waitForTimeout(100 + Math.random() * 200);
           await formElements.tickets.selectOption(userInfo.numberOfTickets);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(250 + Math.random() * 350);
           
+          await formElements.email.click();
+          await page.waitForTimeout(180 + Math.random() * 320);
           await formElements.email.fill(userInfo.email);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(200 + Math.random() * 400);
 
-          // Enter Date of Birth with validation
+          // Enter Date of Birth with human-like delays
           const dobMonth = page.locator("#dlslot_dob_month");
           const dobDay = page.locator("#dlslot_dob_day");
           const dobYear = page.locator("#dlslot_dob_year");
           
           await dobMonth.waitFor({ timeout: 5000 });
+          await dobMonth.click();
+          await page.waitForTimeout(120 + Math.random() * 180);
           await dobMonth.fill(userInfo.dateOfBirth.month);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(150 + Math.random() * 250);
           
+          await dobDay.click();
+          await page.waitForTimeout(100 + Math.random() * 150);
           await dobDay.fill(userInfo.dateOfBirth.day);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(120 + Math.random() * 200);
           
+          await dobYear.click();
+          await page.waitForTimeout(110 + Math.random() * 160);
           await dobYear.fill(userInfo.dateOfBirth.year);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(200 + Math.random() * 300);
 
+          await formElements.zip.click();
+          await page.waitForTimeout(130 + Math.random() * 220);
           await formElements.zip.fill(userInfo.zip);
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(180 + Math.random() * 280);
           
+          await formElements.country.click();
+          await page.waitForTimeout(150 + Math.random() * 250);
           await formElements.country.selectOption({ label: userInfo.countryOfResidence });
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(200 + Math.random() * 300);
 
-          // Agree to terms
-          await formElements.agree.check({ force: true });
-          await page.waitForTimeout(200);
+          // Add another human behavior before final actions
+          await addHumanBehavior(page);
+          
+          // Agree to terms with human-like delay
+          await formElements.agree.click({ force: true });
+          await page.waitForTimeout(400 + Math.random() * 600);
 
           // Take screenshot before submission
           await page.screenshot({ 

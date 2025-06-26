@@ -11,14 +11,19 @@ jobs:
     # Using ubuntu-22.04 for Playwright compatibility
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4 # Updated to v4
-      - uses: actions/setup-node@v4  # Updated to v4
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
         with:
-          node-version: '18'
+          node-version: '20'
+          cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4.2.3
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ hashFiles('package-lock.json') }}
       - name: Install Playwright Browsers
-        # This command should now work on ubuntu-22.04
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         env:
@@ -31,17 +36,16 @@ jobs:
           DOB_YEAR: ${{ secrets.DOB_YEAR }}
           ZIP: ${{ secrets.ZIP }}
           COUNTRY: ${{ secrets.COUNTRY }}
-        # xvfb-run is used to run browser tests in a headless environment
         run: xvfb-run npx playwright test
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 30
-      - uses: actions/upload-artifact@v4
+          retention-days: 7
+      - uses: actions/upload-artifact@v4.6.2
         if: always()
         with:
           name: screenshots
           path: screenshots/
-          retention-days: 30
+          retention-days: 7

@@ -1,15 +1,6 @@
-import { test } from "@playwright/test";
-import { chromium } from "playwright-extra";
-import stealthPlugin from "puppeteer-extra-plugin-stealth";
+import { test, chromium } from "@playwright/test";
 import { getUserInfo } from "../src/get-user-info";
 import { broadwayDirect } from "../src/broadway-direct";
-
-// Load the stealth plugin and use defaults (all tricks to hide playwright usage)
-// Note: playwright-extra is compatible with most puppeteer-extra plugins
-const stealth = stealthPlugin();
-
-// Add the plugin to Playwright (any number of plugins can be added)
-chromium.use(stealth);
 
 const urls = [
   "https://lottery.broadwaydirect.com/show/aladdin/",
@@ -30,8 +21,15 @@ urls.forEach((url) => {
     
     const browser = await chromium.launch({ 
       headless,
-      // Add timeout for browser launch
-      timeout: 30000 
+      timeout: 30000,
+      // Anti-detection browser arguments
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--no-sandbox',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor'
+      ]
     });
     
     try {
