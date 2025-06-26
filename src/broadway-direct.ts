@@ -66,6 +66,43 @@ async function addHumanBehavior(page: Page): Promise<void> {
   }
 }
 
+// Simulate tab behavior with multiple pages
+async function simulateTabBehavior(context: any): Promise<Page> {
+  console.log('🔄 Simulating multi-tab browsing...');
+  
+  // Open a few background tabs to simulate real browsing
+  const backgroundPages = [];
+  const backgroundUrls = [
+    'https://www.google.com/search?q=broadway+shows+nyc',
+    'https://www.timeout.com/newyork/theater',
+    'https://www.broadway.com/'
+  ];
+  
+  // Open 1-2 background tabs
+  const numTabs = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < numTabs; i++) {
+    const bgPage = await context.newPage();
+    await bgPage.goto(backgroundUrls[i], { waitUntil: 'domcontentloaded' });
+    backgroundPages.push(bgPage);
+    await bgPage.waitForTimeout(1000 + Math.random() * 2000);
+  }
+  
+  // Create main page
+  const mainPage = await context.newPage();
+  
+  // Randomly switch between tabs
+  await mainPage.waitForTimeout(2000 + Math.random() * 3000);
+  if (backgroundPages.length > 0 && Math.random() > 0.5) {
+    const randomTab = backgroundPages[Math.floor(Math.random() * backgroundPages.length)];
+    await randomTab.bringToFront();
+    await randomTab.waitForTimeout(1000 + Math.random() * 2000);
+    await mainPage.bringToFront();
+  }
+  
+  console.log(`✅ Opened ${backgroundPages.length} background tabs`);
+  return mainPage;
+}
+
 // Detect Cloudflare challenge page
 async function isCloudflareChallenge(page: Page): Promise<boolean> {
   try {
@@ -143,33 +180,87 @@ async function setupStealthContext(page: Page): Promise<void> {
 }
 
 // Session warming - visit main site first to establish session
-async function warmSession(page: Page, baseUrl: string): Promise<void> {
-  console.log('🔥 Warming session...');
+async function warmSession(page: Page, targetUrl: string): Promise<void> {
+  console.log('🔥 Warming session with natural browsing...');
+  
+  // Random referrers for more natural traffic
+  const referrers = [
+    'https://www.google.com/',
+    'https://www.bing.com/',
+    'https://www.facebook.com/',
+    'https://www.instagram.com/',
+    'https://www.reddit.com/r/Broadway/'
+  ];
+  
+  const referrer = referrers[Math.floor(Math.random() * referrers.length)];
+  
+  // Set referrer for initial navigation
+  await page.setExtraHTTPHeaders({
+    'Referer': referrer
+  });
   
   // Visit main Broadway Direct site first
   await page.goto('https://www.broadwaydirect.com/', { 
-    waitUntil: 'domcontentloaded',
+    waitUntil: 'networkidle2',
     timeout: CONFIG.NAVIGATION_TIMEOUT 
   });
   
-  // Human-like browsing behavior
+  console.log(`📍 Landed on main site with referrer: ${referrer}`);
+  
+  // Extended human-like browsing (2-3 minutes)
   await addHumanBehavior(page);
+  await page.waitForTimeout(5000 + Math.random() * 10000);
+  
+  // Scroll and read content
+  for (let i = 0; i < 3; i++) {
+    await page.mouse.wheel(0, 200 + Math.random() * 300);
+    await page.waitForTimeout(2000 + Math.random() * 3000);
+    await addHumanBehavior(page);
+  }
+  
+  // Click on Shows link if available
+  try {
+    const showsLink = await page.locator('a:has-text("Shows")').first();
+    if (await showsLink.isVisible({ timeout: 5000 })) {
+      console.log('📍 Clicking Shows link...');
+      await showsLink.click();
+      await page.waitForTimeout(3000 + Math.random() * 5000);
+      await addHumanBehavior(page);
+    }
+  } catch (e) {
+    console.log('Shows link not found, continuing...');
+  }
+  
+  // Navigate to lottery section via clicking if possible
+  try {
+    const lotteryLink = await page.locator('a[href*="lottery"]').first();
+    if (await lotteryLink.isVisible({ timeout: 5000 })) {
+      console.log('📍 Clicking lottery link...');
+      await lotteryLink.click();
+      await page.waitForLoadState('networkidle');
+    } else {
+      // Fallback to direct navigation
+      await page.goto('https://lottery.broadwaydirect.com/', { 
+        waitUntil: 'networkidle2',
+        timeout: CONFIG.NAVIGATION_TIMEOUT 
+      });
+    }
+  } catch (e) {
+    await page.goto('https://lottery.broadwaydirect.com/', { 
+      waitUntil: 'networkidle2',
+      timeout: CONFIG.NAVIGATION_TIMEOUT 
+    });
+  }
+  
+  // More browsing on lottery page
+  await addHumanBehavior(page);
+  await page.waitForTimeout(5000 + Math.random() * 10000);
+  
+  // Scroll through lottery page
+  await page.mouse.wheel(0, 400);
   await page.waitForTimeout(2000 + Math.random() * 3000);
   
-  // Scroll around the page
-  await page.mouse.wheel(0, 300);
-  await page.waitForTimeout(1000 + Math.random() * 2000);
-  
-  // Navigate to lottery section
-  await page.goto('https://lottery.broadwaydirect.com/', { 
-    waitUntil: 'domcontentloaded',
-    timeout: CONFIG.NAVIGATION_TIMEOUT 
-  });
-  
-  await addHumanBehavior(page);
-  await page.waitForTimeout(3000 + Math.random() * 5000);
-  
-  console.log('✅ Session warmed');
+  console.log('✅ Session warmed with natural browsing pattern');
 }
 
 // Utility function to retry operations
@@ -238,13 +329,32 @@ async function retryFormSubmission<T>(
 export async function broadwayDirect({ 
   browser, 
   userInfo, 
-  url 
+  url,
+  viewport 
 }: { 
   browser: Browser; 
   userInfo: UserInfo; 
   url: string;
+  viewport?: { width: number; height: number };
 }) {
-  const page = await browser.newPage();
+  // Create isolated browser context for this show
+  const context = await browser.newContext({
+    viewport: viewport || { width: 1920, height: 1080 },
+    userAgent: getRandomUserAgent(),
+    // Accept cookies
+    acceptDownloads: false,
+    hasTouch: false,
+    isMobile: false,
+    javaScriptEnabled: true,
+    locale: 'en-US',
+    timezoneId: 'America/New_York',
+    // Additional permissions
+    permissions: ['geolocation'],
+    geolocation: { latitude: 40.7128, longitude: -74.0060 }, // NYC
+  });
+  
+  // Simulate tab behavior for more natural browsing
+  const page = await simulateTabBehavior(context);
   
   // Set page timeouts
   page.setDefaultTimeout(CONFIG.PAGE_TIMEOUT);
@@ -261,16 +371,43 @@ export async function broadwayDirect({
   // Warm session to avoid cold start detection
   await warmSession(page, url);
   
+  // Save cookies after warming
+  const cookies = await context.cookies();
+  console.log(`🍪 Saved ${cookies.length} cookies from session`);
+  
   let successCount = 0;
   let failureCount = 0;
   let hrefs: (string | null)[] = []; // Declare hrefs in outer scope
   
   try {
-    // Navigate to landing page with retry
-    await retryOperation(
-      () => page.goto(url, { waitUntil: 'domcontentloaded' }),
-      `Navigate to ${showName} landing page`
-    );
+    // Try to navigate via clicking on show link if we're on lottery page
+    let navigatedViaClick = false;
+    if (page.url().includes('lottery.broadwaydirect.com') && !page.url().includes('/show/')) {
+      try {
+        // Look for show link
+        const showLink = await page.locator(`a[href*="${showName}"]`).first();
+        if (await showLink.isVisible({ timeout: 3000 })) {
+          console.log(`📍 Clicking on ${showName} link...`);
+          await showLink.click();
+          await page.waitForLoadState('networkidle');
+          navigatedViaClick = true;
+          
+          // Add natural delay after click
+          await page.waitForTimeout(2000 + Math.random() * 3000);
+          await addHumanBehavior(page);
+        }
+      } catch (e) {
+        console.log('Show link not found, using direct navigation');
+      }
+    }
+    
+    // Fallback to direct navigation if click didn't work
+    if (!navigatedViaClick) {
+      await retryOperation(
+        () => page.goto(url, { waitUntil: 'domcontentloaded' }),
+        `Navigate to ${showName} landing page`
+      );
+    }
     
     // Take initial screenshot
     await page.screenshot({ 
@@ -572,6 +709,7 @@ export async function broadwayDirect({
     
     throw error;
   } finally {
-    await browser.close();
+    // Close context instead of browser (browser stays open for other tests)
+    await context.close();
   }
 }
