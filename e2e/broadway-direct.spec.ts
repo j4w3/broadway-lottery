@@ -24,7 +24,21 @@ const urls = [
 urls.forEach((url) => {
   test(`Sign up at ${url}`, async () => {
     const userInfo = getUserInfo(process.env);
-    const browser = await chromium.launch({ headless: false });
-    await broadwayDirect({ browser, userInfo, url });
+    
+    // In CI, run headless; locally, run headful for debugging
+    const headless = process.env.CI === 'true';
+    
+    const browser = await chromium.launch({ 
+      headless,
+      // Add timeout for browser launch
+      timeout: 30000 
+    });
+    
+    try {
+      await broadwayDirect({ browser, userInfo, url });
+    } catch (error) {
+      console.error(`Failed to complete lottery signup for ${url}:`, error);
+      throw error; // Re-throw to mark test as failed
+    }
   });
 });

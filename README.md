@@ -4,6 +4,16 @@
 
 The project was created to help sign up for Broadway musicals lottery tickets. Currently, it works for lotteries on the Broadway Direct website. The list of musicals is defined in the [source code](/e2e/broadway-direct.spec.ts#L14). You can edit that list directly on the website. The signup process is run at around 11 a.m. EST. The results are usually available around 3 p.m. EST. Enjoy the shows and please use this automation responsibly.
 
+### Debugging Features
+
+The automation now captures screenshots at key points during the lottery signup process:
+- Landing page for each show
+- Form page before filling
+- Filled form before submission
+- Error screenshots if something goes wrong
+
+Screenshots are automatically uploaded as GitHub Actions artifacts and are available for 30 days after each run. This helps diagnose issues when the automation fails.
+
 ## How to use it
 
 1. Fork the repository

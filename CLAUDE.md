@@ -65,6 +65,9 @@ P2 variants (e.g., `P2_FIRST_NAME`) for second person.
 3. **Random Delays**: Implements random wait times between form submissions
 4. **No Local Config**: All configuration via GitHub secrets (no .env files)
 5. **Simple Architecture**: No state management, databases, or complex dependencies
+6. **Screenshot Capture**: Automatically captures screenshots at key points (landing, form, before submit, errors)
+7. **Error Resilience**: Individual entry failures don't stop processing other entries/shows
+8. **Headless Mode**: Runs headless in CI (`CI=true`), headful locally for debugging
 
 ## Development Guidelines
 

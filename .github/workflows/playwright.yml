@@ -8,7 +8,7 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    # Changed to ubuntu-22.04 for better Playwright compatibility
+    # Using ubuntu-22.04 for Playwright compatibility
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4 # Updated to v4
@@ -38,4 +38,10 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: screenshots/
           retention-days: 30
