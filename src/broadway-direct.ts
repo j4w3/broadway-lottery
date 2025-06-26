@@ -109,11 +109,15 @@ async function isCloudflareChallenge(page: Page): Promise<boolean> {
     // Check for Cloudflare challenge indicators
     const challengeSelectors = [
       'text="Verifying you are human"',
+      'text="This may take a few seconds"',
       'text="Please wait while we check your browser"',
       'text="Checking your browser before accessing"',
+      'text="needs to review the security of your connection"',
+      'text="Performance & security by Cloudflare"',
       '[class*="cf-browser-verification"]',
       '#cf-wrapper',
-      '.cf-im-under-attack'
+      '.cf-im-under-attack',
+      'text="Ray ID:"'
     ];
     
     for (const selector of challengeSelectors) {
@@ -125,6 +129,20 @@ async function isCloudflareChallenge(page: Page): Promise<boolean> {
     // Check URL for Cloudflare patterns
     const url = page.url();
     if (url.includes('__cf_chl_rt_tk') || url.includes('cf-browser-verification')) {
+      return true;
+    }
+    
+    // Check page title for Cloudflare patterns
+    const title = await page.title();
+    if (title.includes('Just a moment') || title.includes('Checking your browser')) {
+      return true;
+    }
+    
+    // Check for blank page (complete block)
+    const bodyText = await page.locator('body').textContent();
+    if (bodyText && bodyText.trim().length < 50 && url.includes('lottery.broadwaydirect.com')) {
+      // Very little content on what should be a content-rich page
+      console.log('Detected possible blank page block');
       return true;
     }
     
@@ -430,6 +448,12 @@ export async function broadwayDirect({
   try {
     // Warm session to avoid cold start detection
     await warmSession(page, url);
+    
+    // Take screenshot after successful warming
+    await page.screenshot({ 
+      path: join(screenshotsDir, `${showName}-warming-${Date.now()}.png`),
+      fullPage: true 
+    });
   } catch (warmError) {
     // Take screenshot on warming failure
     try {
@@ -488,11 +512,23 @@ export async function broadwayDirect({
     // Handle any modals on the show landing page
     await dismissEmailModal(page);
     
-    // Take initial screenshot
+    // Take screenshot after modal dismissal
     await page.screenshot({ 
-      path: join(screenshotsDir, `${showName}-landing-${Date.now()}.png`),
+      path: join(screenshotsDir, `${showName}-post-modal-${Date.now()}.png`),
       fullPage: true 
     });
+
+    // Check for Cloudflare challenge after navigation
+    console.log(`Checking for Cloudflare challenge on ${showName} page...`);
+    const isCloudflare = await isCloudflareChallenge(page);
+    if (isCloudflare) {
+      console.log('🚫 CLOUDFLARE DETECTED - Page blocked by verification');
+      throw new Error('Cloudflare challenge detected on lottery page');
+    }
+
+    // Log page state for diagnosis
+    console.log(`📄 Page title: ${await page.title()}`);
+    console.log(`🔗 Current URL: ${page.url()}`);
 
     // Check lottery availability (business logic - no retry needed)
     console.log(`Checking lottery availability for ${showName}...`);
@@ -515,6 +551,11 @@ export async function broadwayDirect({
         console.log(`ℹ️  ${showName}: All ${totalClosedCount} lotteries are closed/upcoming`);
       } else {
         console.log(`ℹ️  ${showName}: No lotteries found on page`);
+        // Take screenshot when no lotteries found
+        await page.screenshot({ 
+          path: join(screenshotsDir, `${showName}-no-lotteries-${Date.now()}.png`),
+          fullPage: true 
+        });
       }
       
       // Log summary for all closed
