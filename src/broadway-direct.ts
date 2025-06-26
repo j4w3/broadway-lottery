@@ -201,7 +201,7 @@ async function warmSession(page: Page, targetUrl: string): Promise<void> {
   
   // Visit main Broadway Direct site first
   await page.goto('https://www.broadwaydirect.com/', { 
-    waitUntil: 'networkidle2',
+    waitUntil: 'networkidle',
     timeout: CONFIG.NAVIGATION_TIMEOUT 
   });
   
@@ -241,13 +241,13 @@ async function warmSession(page: Page, targetUrl: string): Promise<void> {
     } else {
       // Fallback to direct navigation
       await page.goto('https://lottery.broadwaydirect.com/', { 
-        waitUntil: 'networkidle2',
+        waitUntil: 'networkidle',
         timeout: CONFIG.NAVIGATION_TIMEOUT 
       });
     }
   } catch (e) {
     await page.goto('https://lottery.broadwaydirect.com/', { 
-      waitUntil: 'networkidle2',
+      waitUntil: 'networkidle',
       timeout: CONFIG.NAVIGATION_TIMEOUT 
     });
   }
