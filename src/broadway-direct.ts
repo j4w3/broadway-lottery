@@ -207,16 +207,19 @@ async function warmSession(page: Page, targetUrl: string): Promise<void> {
   
   console.log(`📍 Landed on main site with referrer: ${referrer}`);
   
-  // Extended human-like browsing (2-3 minutes)
-  await addHumanBehavior(page);
-  await page.waitForTimeout(5000 + Math.random() * 10000);
-  
-  // Scroll and read content
-  for (let i = 0; i < 3; i++) {
-    await page.mouse.wheel(0, 200 + Math.random() * 300);
-    await page.waitForTimeout(2000 + Math.random() * 3000);
-    await addHumanBehavior(page);
+  // Check for immediate Cloudflare challenge
+  if (await isCloudflareChallenge(page)) {
+    console.log('🚫 Cloudflare detected on main site - aborting warm-up');
+    throw new Error('Cloudflare challenge detected during session warming');
   }
+  
+  // Reduced but natural browsing (30-45 seconds total)
+  await addHumanBehavior(page);
+  await page.waitForTimeout(3000 + Math.random() * 5000);
+  
+  // Quick scroll
+  await page.mouse.wheel(0, 200 + Math.random() * 300);
+  await page.waitForTimeout(2000 + Math.random() * 3000);
   
   // Click on Shows link if available
   try {
@@ -252,15 +255,17 @@ async function warmSession(page: Page, targetUrl: string): Promise<void> {
     });
   }
   
-  // More browsing on lottery page
-  await addHumanBehavior(page);
-  await page.waitForTimeout(5000 + Math.random() * 10000);
+  // Quick check for Cloudflare on lottery page
+  if (await isCloudflareChallenge(page)) {
+    console.log('🚫 Cloudflare detected on lottery page');
+    throw new Error('Cloudflare challenge detected on lottery page');
+  }
   
-  // Scroll through lottery page
-  await page.mouse.wheel(0, 400);
+  // Brief interaction on lottery page
+  await addHumanBehavior(page);
   await page.waitForTimeout(2000 + Math.random() * 3000);
   
-  console.log('✅ Session warmed with natural browsing pattern');
+  console.log('✅ Session warmed');
 }
 
 // Utility function to retry operations
@@ -368,8 +373,25 @@ export async function broadwayDirect({
   console.log(`Processing show: ${showName} at ${url}`);
   console.log(`Config: retries=${CONFIG.MAX_RETRIES}, delay=${CONFIG.MIN_DELAY}-${CONFIG.MAX_DELAY}ms, timeout=${CONFIG.PAGE_TIMEOUT}ms`);
   
-  // Warm session to avoid cold start detection
-  await warmSession(page, url);
+  try {
+    // Warm session to avoid cold start detection
+    await warmSession(page, url);
+  } catch (warmError) {
+    // Take screenshot on warming failure
+    try {
+      await page.screenshot({ 
+        path: join(screenshotsDir, `${showName}-warming-error-${Date.now()}.png`),
+        fullPage: true 
+      });
+    } catch (e) {}
+    
+    // If Cloudflare detected during warming, fail fast
+    if (warmError.message.includes('Cloudflare')) {
+      console.error(`🚫 FAIL FAST: Cloudflare blocking detected for ${showName}`);
+      throw new Error(`Cloudflare blocking active - skipping ${showName}`);
+    }
+    throw warmError;
+  }
   
   // Save cookies after warming
   const cookies = await context.cookies();
