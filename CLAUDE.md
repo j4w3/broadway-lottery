@@ -58,16 +58,22 @@ All user information must be configured as repository secrets:
 
 P2 variants (e.g., `P2_FIRST_NAME`) for second person.
 
+**Optional Configuration Secrets:**
+- `MAX_RETRIES`, `PAGE_TIMEOUT`, `NAVIGATION_TIMEOUT`
+- `MIN_DELAY`, `MAX_DELAY` (for configurable random delays)
+
 ## Important Implementation Details
 
 1. **Show List**: Configured in `e2e/broadway-direct.spec.ts:14` - modify this array to change which shows to enter
 2. **Stealth Mode**: Uses puppeteer-extra-plugin-stealth to avoid bot detection
-3. **Random Delays**: Implements random wait times between form submissions
-4. **No Local Config**: All configuration via GitHub secrets (no .env files)
-5. **Simple Architecture**: No state management, databases, or complex dependencies
-6. **Screenshot Capture**: Automatically captures screenshots at key points (landing, form, before submit, errors)
-7. **Error Resilience**: Individual entry failures don't stop processing other entries/shows
-8. **Headless Mode**: Runs headless in CI (`CI=true`), headful locally for debugging
+3. **Retry Logic**: Automatic retries (default: 2) for failed operations with exponential backoff
+4. **Configurable Delays**: Random delays between submissions (configurable via env vars)
+5. **Timeout Management**: Separate timeouts for page operations and navigation
+6. **Form Validation**: Validates that required form elements exist before filling
+7. **Screenshot Capture**: Captures screenshots at key points and errors
+8. **Error Resilience**: Individual entry failures don't stop processing other entries/shows
+9. **Headless Mode**: Runs headless in CI (`CI=true`), headful locally for debugging
+10. **Success Tracking**: Logs detailed success/failure summaries with success rates
 
 ## Development Guidelines
 
