@@ -75,6 +75,7 @@ export async function broadwayDirect({
   
   let successCount = 0;
   let failureCount = 0;
+  let hrefs: (string | null)[] = []; // Declare hrefs in outer scope
   
   try {
     // Navigate to landing page with retry
@@ -89,23 +90,66 @@ export async function broadwayDirect({
       fullPage: true 
     });
 
-    // Find lottery entry links with retry
-    const { links, hrefs } = await retryOperation(async () => {
-      const links = await page.getByRole("link", { name: /Enter/i }).all();
+    // Check lottery availability (business logic - no retry needed)
+    console.log(`Checking lottery availability for ${showName}...`);
+    
+    // Look for "Enter Now" buttons (open lotteries)
+    const enterNowButtons = await page.getByRole("link", { name: /Enter Now/i }).all();
+    
+    // Look for closed/upcoming indicators
+    const closedButtons = await page.getByRole("link", { name: /(Closed|Upcoming)/i }).all();
+    const closedText = await page.getByText(/(Closed|Upcoming)/i).all();
+    const totalClosedCount = closedButtons.length + closedText.length;
+    
+    // Calculate total lotteries on this page
+    const totalLotteries = enterNowButtons.length + totalClosedCount;
+    
+    // Check business state
+    if (enterNowButtons.length === 0) {
+      // No open lotteries found
+      if (totalClosedCount > 0) {
+        console.log(`ℹ️  ${showName}: All ${totalClosedCount} lotteries are closed/upcoming`);
+      } else {
+        console.log(`ℹ️  ${showName}: No lotteries found on page`);
+      }
+      
+      // Log summary for all closed
+      console.log(`\n📊 ${showName.toUpperCase()} SUMMARY:`);
+      console.log(`   ℹ️  All lotteries currently closed/upcoming`);
+      console.log(`   🎯 Total lotteries: ${totalLotteries}`);
+      console.log(`   📈 Status: Not Available`);
+      return; // Exit gracefully - this is normal, not an error
+    } else {
+      // Some lotteries are open!
+      if (totalClosedCount > 0) {
+        console.log(`✅ ${showName}: ${enterNowButtons.length}/${totalLotteries} lotteries available (${totalClosedCount} closed/upcoming)`);
+      } else {
+        console.log(`✅ ${showName}: All ${enterNowButtons.length} lotteries are available`);
+      }
+    }
+    
+    // Lottery is open - get the Enter Now links with retry (for technical failures only)
+    const linkData = await retryOperation(async () => {
+      const links = await page.getByRole("link", { name: /Enter Now/i }).all();
       const hrefs = await Promise.all(
         links.map((link) => link.getAttribute("href"))
       );
       
-      // Validate that we found lottery links
-      if (hrefs.length === 0) {
-        throw new Error("No lottery entry links found - page may have changed");
+      // Filter out null hrefs
+      const validHrefs = hrefs.filter(href => href !== null);
+      
+      // This should not happen since we already found Enter Now buttons above
+      if (validHrefs.length === 0) {
+        throw new Error("Enter Now buttons disappeared - possible page timing issue");
       }
       
-      return { links, hrefs };
-    }, `Find lottery entry links for ${showName}`);
+      return { links, hrefs: validHrefs };
+    }, `Get lottery entry links for ${showName}`);
     
-    console.log(`Found ${hrefs.length} lottery entries for ${showName}`);
+    hrefs = linkData.hrefs; // Assign to outer scope variable
+    console.log(`✅ Found ${hrefs.length} open lottery entries for ${showName}`);
 
+    // Process each lottery entry
     for (let i = 0; i < hrefs.length; i++) {
       const href = hrefs[i];
       if (!href) {
@@ -119,6 +163,30 @@ export async function broadwayDirect({
         await retryOperation(async () => {
           // Navigate to entry form
           await page.goto(href, { waitUntil: 'domcontentloaded' });
+          
+          // Handle potential cookie banners
+          try {
+            // Common cookie banner selectors
+            const cookieSelectors = [
+              '[id*="cookie"] button:has-text("Accept")',
+              '[id*="cookie"] button:has-text("OK")', 
+              '[id*="cookie"] button:has-text("Agree")',
+              '[class*="cookie"] button',
+              'button:has-text("Accept Cookies")'
+            ];
+            
+            for (const selector of cookieSelectors) {
+              const cookieBtn = page.locator(selector).first();
+              if (await cookieBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+                await cookieBtn.click();
+                console.log(`Dismissed cookie banner for ${showName}`);
+                break;
+              }
+            }
+          } catch (error) {
+            // Cookie handling is optional, continue if it fails
+            console.log(`No cookie banner found for ${showName}`);
+          }
 
           // Take screenshot of form page
           await page.screenshot({ 
@@ -235,7 +303,8 @@ export async function broadwayDirect({
     console.log(`   📈 Success Rate: ${totalEntries > 0 ? Math.round((successCount / totalEntries) * 100) : 0}%`);
     
   } catch (error) {
-    failureCount = hrefs?.length || 1; // If we failed before finding hrefs, count as 1 failure
+    const totalEntries = hrefs.length || 1; // Use the outer scope hrefs variable
+    failureCount = totalEntries; // Count all as failures if fatal error
     console.error(`💥 Fatal error processing ${showName}: ${error.message}`);
     
     // Take error screenshot
@@ -251,6 +320,7 @@ export async function broadwayDirect({
     // Log final summary even on fatal error
     console.log(`\n📊 ${showName.toUpperCase()} SUMMARY (FAILED):`);
     console.log(`   ❌ Fatal error occurred`);
+    console.log(`   🎯 Total entries: ${totalEntries}`);
     console.log(`   📈 Success Rate: 0%`);
     
     throw error;
