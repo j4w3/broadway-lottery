@@ -19,9 +19,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   /* Run tests sequentially to avoid modal conflicts */
   workers: process.env.CI ? 1 : undefined,
-  /* Increase timeout for anti-detection measures */
-  timeout: 5 * 60 * 1000, // 5 minutes per test
-  globalTimeout: 30 * 60 * 1000, // 30 minutes total
+  /* Reasonable timeouts for anti-detection measures */
+  timeout: 3 * 60 * 1000, // 3 minutes per test
+  globalTimeout: 15 * 60 * 1000, // 15 minutes total
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */

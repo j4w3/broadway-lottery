@@ -42,20 +42,24 @@ const viewports = [
   { width: 1680, height: 1050 }
 ];
 
-shuffledUrls.forEach((url, index) => {
-  test(`Sign up at ${url}`, async () => {
-    // Check circuit breaker before starting
+// Use serial execution for proper circuit breaker behavior
+test.describe.serial('Broadway lottery entries', () => {
+  test.beforeEach(async ({}, testInfo) => {
+    // Check circuit breaker before each test
     if (cloudflareDetected) {
-      console.log(`⚡ CIRCUIT BREAKER ACTIVE: Skipping ${url} due to Cloudflare detection on ${cloudflareShow}`);
-      test.skip();
-      return;
+      console.log(`⚡ CIRCUIT BREAKER ACTIVE: Skipping test due to Cloudflare detection on ${cloudflareShow}`);
+      testInfo.skip();
     }
+  });
+
+  shuffledUrls.forEach((url, index) => {
+    test(`Sign up at ${url}`, async () => {
     const userInfo = getUserInfo(process.env);
     
-    // Add random start delay to distribute load naturally (0-20 seconds)
-    const startDelay = Math.random() * 20000;
+    // Add small random start delay to distribute load naturally (0-3 seconds)
+    const startDelay = Math.random() * 3000;
     const showName = url.match(/show\/([^\/]+)/)?.[1] || "unknown";
-    console.log(`🎭 [${showName}] Starting in ${Math.round(startDelay/1000)}s...`);
+    console.log(`🎭 [${showName}] Starting in ${(startDelay/1000).toFixed(1)}s...`);
     await new Promise(resolve => setTimeout(resolve, startDelay));
     
     // In CI, run headless; locally, run headful for debugging
@@ -119,6 +123,8 @@ let browser;
         cloudflareDetected = true;
         cloudflareShow = showName;
         console.log(`⚡ CIRCUIT BREAKER ACTIVATED: Cloudflare detected on ${showName}, stopping all remaining tests`);
+        // Fail immediately without retries
+        test.fail();
       }
       
       throw error; // Re-throw to mark test as failed
@@ -135,8 +141,8 @@ let browser;
   });
 });
 
-// Global test completion handler
-test.afterAll(async () => {
+  // Global test completion handler
+  test.afterAll(async () => {
   console.log('\n=== TEST SUITE COMPLETION SUMMARY ===');
   if (cloudflareDetected) {
     console.log(`⚡ Circuit breaker was activated due to Cloudflare detection on: ${cloudflareShow}`);
@@ -145,4 +151,5 @@ test.afterAll(async () => {
     console.log('✅ All tests completed without circuit breaker activation');
   }
   console.log('=====================================\n');
+  });
 });
