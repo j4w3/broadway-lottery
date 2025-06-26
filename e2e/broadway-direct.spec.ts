@@ -33,27 +33,56 @@ function shuffleArray<T>(array: T[]): T[] {
 
 const shuffledUrls = shuffleArray(urls);
 
+// Create batches for parallel execution within batches
+const batches = [
+  shuffledUrls.slice(0, 3),  // Batch 1: First 3 shows
+  shuffledUrls.slice(3, 5),  // Batch 2: Next 2 shows  
+  shuffledUrls.slice(5)      // Batch 3: Last 2 shows
+];
+
+// User agents for rotation
+const userAgents = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'
+];
+
 // Viewport sizes for randomization
 const viewports = [
   { width: 1920, height: 1080 },
   { width: 1366, height: 768 },
   { width: 1440, height: 900 },
   { width: 1536, height: 864 },
-  { width: 1680, height: 1050 }
+  { width: 1680, height: 1050 },
+  { width: 1280, height: 720 },
+  { width: 1600, height: 900 }
 ];
 
-// Use serial execution for proper circuit breaker behavior
-test.describe.serial('Broadway lottery entries', () => {
-  test.beforeEach(async ({}, testInfo) => {
-    // Check circuit breaker before each test
-    if (cloudflareDetected) {
-      console.log(`⚡ CIRCUIT BREAKER ACTIVE: Skipping test due to Cloudflare detection on ${cloudflareShow}`);
-      testInfo.skip();
+// Process batches with delays between them
+batches.forEach((batch, batchIndex) => {
+  test.describe(`Batch ${batchIndex + 1}`, () => {
+    // Add delay before batch (except first one)
+    if (batchIndex > 0) {
+      test.beforeAll(async () => {
+        const batchDelay = 60000 + Math.random() * 60000; // 1-2 minutes between batches
+        console.log(`⏸️ Batch ${batchIndex + 1} delay: ${(batchDelay/1000).toFixed(1)}s`);
+        await new Promise(resolve => setTimeout(resolve, batchDelay));
+      });
     }
-  });
 
-  shuffledUrls.forEach((url, index) => {
-    test(`Sign up at ${url}`, async () => {
+    // Check circuit breaker before each batch
+    test.beforeEach(async ({}, testInfo) => {
+      if (cloudflareDetected) {
+        console.log(`⚡ CIRCUIT BREAKER ACTIVE: Skipping test due to Cloudflare detection on ${cloudflareShow}`);
+        testInfo.skip();
+      }
+    });
+
+    // Parallel execution within batch
+    batch.forEach((url, urlIndex) => {
+      test(`Sign up at ${url}`, async () => {
     const userInfo = getUserInfo(process.env);
     
     // Add small random start delay to distribute load naturally (0-3 seconds)
@@ -65,31 +94,33 @@ test.describe.serial('Broadway lottery entries', () => {
     // In CI, run headless; locally, run headful for debugging
     const headless = process.env.CI === 'true';
     
-    // Random viewport
+    // Random viewport and user agent for each show
     const viewport = viewports[Math.floor(Math.random() * viewports.length)];
+    const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+    console.log(`🔧 Using viewport: ${viewport.width}x${viewport.height}, UA: ${userAgent.split(' ')[5] || 'Custom'}`);
+    
+    // Random browser arguments for more variation
+    const randomArgs = [
+      '--disable-blink-features=AutomationControlled',
+      '--disable-features=VizDisplayCompositor',
+      '--disable-ipc-flooding-protection',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-field-trial-config',
+      '--disable-background-networking'
+    ];
     
 let browser;
     try {
       browser = await chromium.launch({ 
         headless,
         timeout: 30000,
-        viewport,
-        // Enhanced anti-detection browser arguments
+        // Enhanced anti-detection browser arguments with randomization
         args: [
-          '--disable-blink-features=AutomationControlled',
-          '--disable-dev-shm-usage',
           '--no-sandbox',
+          '--disable-dev-shm-usage',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--disable-field-trial-config',
-          '--disable-back-forward-cache',
-          '--disable-ipc-flooding-protection',
-          '--enable-features=NetworkService,NetworkServiceInProcess',
-          '--force-color-profile=srgb',
-          '--metrics-recording-only',
           '--no-default-browser-check',
           '--no-first-run',
           '--password-store=basic',
@@ -98,8 +129,9 @@ let browser;
           '--disable-default-apps',
           '--mute-audio',
           '--no-zygote',
-          '--disable-background-networking',
-          `--window-size=${viewport.width},${viewport.height}`
+          `--user-agent=${userAgent}`,
+          `--window-size=${viewport.width},${viewport.height}`,
+          ...randomArgs.slice(0, Math.floor(Math.random() * 4) + 2) // Random subset of stealth args
         ]
       });
     } catch (browserError) {
@@ -138,11 +170,13 @@ let browser;
         }
       }
     }
+      });
+    });
   });
 });
 
-  // Global test completion handler
-  test.afterAll(async () => {
+// Global test completion handler
+test.afterAll(async () => {
   console.log('\n=== TEST SUITE COMPLETION SUMMARY ===');
   if (cloudflareDetected) {
     console.log(`⚡ Circuit breaker was activated due to Cloudflare detection on: ${cloudflareShow}`);
@@ -151,5 +185,4 @@ let browser;
     console.log('✅ All tests completed without circuit breaker activation');
   }
   console.log('=====================================\n');
-  });
 });

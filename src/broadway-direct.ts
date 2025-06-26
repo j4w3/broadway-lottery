@@ -242,103 +242,6 @@ async function dismissEmailModal(page: Page): Promise<boolean> {
   }
 }
 
-// Session warming - visit main site first to establish session
-async function warmSession(page: Page, targetUrl: string): Promise<void> {
-  console.log('🔥 Warming session with natural browsing...');
-  
-  // Random referrers for more natural traffic
-  const referrers = [
-    'https://www.google.com/',
-    'https://www.bing.com/',
-    'https://www.facebook.com/',
-    'https://www.instagram.com/',
-    'https://www.reddit.com/r/Broadway/'
-  ];
-  
-  const referrer = referrers[Math.floor(Math.random() * referrers.length)];
-  
-  // Set referrer for initial navigation
-  await page.setExtraHTTPHeaders({
-    'Referer': referrer
-  });
-  
-  // Visit main Broadway Direct site first with faster loading strategy
-  await page.goto('https://www.broadwaydirect.com/', { 
-    waitUntil: 'domcontentloaded',  // Changed from networkidle to domcontentloaded
-    timeout: CONFIG.NAVIGATION_TIMEOUT 
-  });
-  
-  // Handle the email signup modal that blocks networkidle
-  await dismissEmailModal(page);
-  
-  console.log(`📍 Landed on main site with referrer: ${referrer}`);
-  
-  // Check for immediate Cloudflare challenge
-  if (await isCloudflareChallenge(page)) {
-    console.log('🚫 Cloudflare detected on main site - aborting warm-up');
-    throw new Error('Cloudflare challenge detected during session warming');
-  }
-  
-  // Reduced but natural browsing (30-45 seconds total)
-  await addHumanBehavior(page);
-  await page.waitForTimeout(3000 + Math.random() * 5000);
-  
-  // Quick scroll
-  await page.mouse.wheel(0, 200 + Math.random() * 300);
-  await page.waitForTimeout(2000 + Math.random() * 3000);
-  
-  // Click on Shows link if available
-  try {
-    const showsLink = await page.locator('a:has-text("Shows")').first();
-    if (await showsLink.isVisible({ timeout: 5000 })) {
-      console.log('📍 Clicking Shows link...');
-      await showsLink.click();
-      await page.waitForTimeout(3000 + Math.random() * 5000);
-      await addHumanBehavior(page);
-    }
-  } catch (e) {
-    console.log('Shows link not found, continuing...');
-  }
-  
-  // Navigate to lottery section via clicking if possible
-  try {
-    const lotteryLink = await page.locator('a[href*="lottery"]').first();
-    if (await lotteryLink.isVisible({ timeout: 5000 })) {
-      console.log('📍 Clicking lottery link...');
-      await lotteryLink.click();
-      await page.waitForLoadState('domcontentloaded');  // Changed from networkidle
-      // Handle modal on lottery page after navigation
-      await dismissEmailModal(page);
-    } else {
-      // Fallback to direct navigation
-      await page.goto('https://lottery.broadwaydirect.com/', { 
-        waitUntil: 'domcontentloaded',  // Changed from networkidle
-        timeout: CONFIG.NAVIGATION_TIMEOUT 
-      });
-      // Handle modal on lottery page
-      await dismissEmailModal(page);
-    }
-  } catch (e) {
-    await page.goto('https://lottery.broadwaydirect.com/', { 
-      waitUntil: 'domcontentloaded',  // Changed from networkidle
-      timeout: CONFIG.NAVIGATION_TIMEOUT 
-    });
-    // Handle modal on lottery page
-    await dismissEmailModal(page);
-  }
-  
-  // Quick check for Cloudflare on lottery page
-  if (await isCloudflareChallenge(page)) {
-    console.log('🚫 Cloudflare detected on lottery page');
-    throw new Error('Cloudflare challenge detected on lottery page');
-  }
-  
-  // Brief interaction on lottery page
-  await addHumanBehavior(page);
-  await page.waitForTimeout(2000 + Math.random() * 3000);
-  
-  console.log('✅ Session warmed');
-}
 
 // Utility function to retry operations
 async function retryOperation<T>(
@@ -445,35 +348,8 @@ export async function broadwayDirect({
   console.log(`Processing show: ${showName} at ${url}`);
   console.log(`Config: retries=${CONFIG.MAX_RETRIES}, delay=${CONFIG.MIN_DELAY}-${CONFIG.MAX_DELAY}ms, timeout=${CONFIG.PAGE_TIMEOUT}ms`);
   
-  try {
-    // Warm session to avoid cold start detection
-    await warmSession(page, url);
-    
-    // Take screenshot after successful warming
-    await page.screenshot({ 
-      path: join(screenshotsDir, `${showName}-warming-${Date.now()}.png`),
-      fullPage: true 
-    });
-  } catch (warmError) {
-    // Take screenshot on warming failure
-    try {
-      await page.screenshot({ 
-        path: join(screenshotsDir, `${showName}-warming-error-${Date.now()}.png`),
-        fullPage: true 
-      });
-    } catch (e) {}
-    
-    // If Cloudflare detected during warming, fail fast
-    if (warmError.message.includes('Cloudflare')) {
-      console.error(`🚫 FAIL FAST: Cloudflare blocking detected for ${showName}`);
-      throw new Error(`Cloudflare blocking active - skipping ${showName}`);
-    }
-    throw warmError;
-  }
-  
-  // Save cookies after warming
-  const cookies = await context.cookies();
-  console.log(`🍪 Saved ${cookies.length} cookies from session`);
+  // Skip session warming - go directly to lottery page
+  console.log(`🎯 Going directly to ${showName} lottery page...`);
   
   let successCount = 0;
   let failureCount = 0;
