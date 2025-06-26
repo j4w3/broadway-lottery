@@ -56,14 +56,12 @@ async function humanLikeType(page: Page, selector: string, text: string): Promis
 
 // Add random mouse movements for more human-like behavior
 async function addHumanBehavior(page: Page): Promise<void> {
-  // Random viewport movements
-  const viewport = page.viewportSize();
-  if (viewport) {
-    const x = Math.floor(Math.random() * viewport.width);
-    const y = Math.floor(Math.random() * viewport.height);
-    await page.mouse.move(x, y);
-    await page.waitForTimeout(100 + Math.random() * 300);
-  }
+  // Random viewport movements - use default viewport dimensions
+  const viewport = { width: 1920, height: 1080 }; // Default fallback
+  const x = Math.floor(Math.random() * viewport.width);
+  const y = Math.floor(Math.random() * viewport.height);
+  await page.mouse.move(x, y);
+  await page.waitForTimeout(100 + Math.random() * 300);
 }
 
 // Simulate tab behavior with multiple pages

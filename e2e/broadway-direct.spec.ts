@@ -1,11 +1,7 @@
 import { test } from "@playwright/test";
-import { chromium } from "playwright-extra";
-import stealthPlugin from "puppeteer-extra-plugin-stealth";
+import { chromium } from "@playwright/test";
 import { getUserInfo } from "../src/get-user-info";
 import { broadwayDirect } from "../src/broadway-direct";
-
-// Configure stealth plugin
-chromium.use(stealthPlugin());
 
 // Global circuit breaker for Cloudflare detection
 let cloudflareDetected = false;
@@ -60,29 +56,23 @@ const viewports = [
   { width: 1600, height: 900 }
 ];
 
-// Process batches with delays between them
-batches.forEach((batch, batchIndex) => {
-  test.describe(`Batch ${batchIndex + 1}`, () => {
-    // Add delay before batch (except first one)
-    if (batchIndex > 0) {
-      test.beforeAll(async () => {
-        const batchDelay = 60000 + Math.random() * 60000; // 1-2 minutes between batches
-        console.log(`⏸️ Batch ${batchIndex + 1} delay: ${(batchDelay/1000).toFixed(1)}s`);
-        await new Promise(resolve => setTimeout(resolve, batchDelay));
-      });
+// Use serial execution with smart delays to maintain performance
+test.describe.serial('Broadway lottery entries', () => {
+  test.beforeEach(async ({}, testInfo) => {
+    if (cloudflareDetected) {
+      console.log(`⚡ CIRCUIT BREAKER ACTIVE: Skipping test due to Cloudflare detection on ${cloudflareShow}`);
+      testInfo.skip();
     }
+  });
 
-    // Check circuit breaker before each batch
-    test.beforeEach(async ({}, testInfo) => {
-      if (cloudflareDetected) {
-        console.log(`⚡ CIRCUIT BREAKER ACTIVE: Skipping test due to Cloudflare detection on ${cloudflareShow}`);
-        testInfo.skip();
+  shuffledUrls.forEach((url, index) => {
+    test(`Sign up at ${url}`, async () => {
+      // Smart delay strategy: delay every 3 shows to break up patterns
+      if (index > 0 && index % 3 === 0) {
+        const groupDelay = 60000 + Math.random() * 60000; // 1-2 minutes between groups
+        console.log(`⏸️ Group delay after ${index} shows: ${(groupDelay/1000).toFixed(1)}s`);
+        await new Promise(resolve => setTimeout(resolve, groupDelay));
       }
-    });
-
-    // Parallel execution within batch
-    batch.forEach((url, urlIndex) => {
-      test(`Sign up at ${url}`, async () => {
     const userInfo = getUserInfo(process.env);
     
     // Add small random start delay to distribute load naturally (0-3 seconds)
@@ -170,7 +160,6 @@ let browser;
         }
       }
     }
-      });
     });
   });
 });

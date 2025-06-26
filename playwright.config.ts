@@ -17,8 +17,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Smarter retry logic - fewer retries for faster execution */
   retries: process.env.CI ? 1 : 0,
-  /* Allow parallel execution within batches */
-  workers: process.env.CI ? 3 : undefined,
+  /* Use single worker for reliable serial execution */
+  workers: process.env.CI ? 1 : undefined,
   /* Reasonable timeouts for anti-detection measures */
   timeout: 3 * 60 * 1000, // 3 minutes per test
   globalTimeout: 15 * 60 * 1000, // 15 minutes total
