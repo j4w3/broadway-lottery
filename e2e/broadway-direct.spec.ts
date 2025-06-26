@@ -22,13 +22,31 @@ urls.forEach((url) => {
     const browser = await chromium.launch({ 
       headless,
       timeout: 30000,
-      // Anti-detection browser arguments
+      // Enhanced anti-detection browser arguments
       args: [
         '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
         '--no-sandbox',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor'
+        '--disable-features=VizDisplayCompositor',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-field-trial-config',
+        '--disable-back-forward-cache',
+        '--disable-ipc-flooding-protection',
+        '--enable-features=NetworkService,NetworkServiceInProcess',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--no-default-browser-check',
+        '--no-first-run',
+        '--password-store=basic',
+        '--use-mock-keychain',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-default-apps',
+        '--mute-audio',
+        '--no-zygote',
+        '--disable-background-networking'
       ]
     });
     

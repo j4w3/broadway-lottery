@@ -16,6 +16,20 @@ const CONFIG = {
   NAVIGATION_TIMEOUT: parseInt(process.env.NAVIGATION_TIMEOUT || "60000"),
 };
 
+// Randomized user agents for retry attempts
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'
+];
+
+// Get random user agent
+function getRandomUserAgent(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
 // Ensure screenshots directory exists
 const screenshotsDir = join(process.cwd(), "screenshots");
 if (!existsSync(screenshotsDir)) {
@@ -52,6 +66,112 @@ async function addHumanBehavior(page: Page): Promise<void> {
   }
 }
 
+// Detect Cloudflare challenge page
+async function isCloudflareChallenge(page: Page): Promise<boolean> {
+  try {
+    // Check for Cloudflare challenge indicators
+    const challengeSelectors = [
+      'text="Verifying you are human"',
+      'text="Please wait while we check your browser"',
+      'text="Checking your browser before accessing"',
+      '[class*="cf-browser-verification"]',
+      '#cf-wrapper',
+      '.cf-im-under-attack'
+    ];
+    
+    for (const selector of challengeSelectors) {
+      if (await page.locator(selector).isVisible({ timeout: 2000 }).catch(() => false)) {
+        return true;
+      }
+    }
+    
+    // Check URL for Cloudflare patterns
+    const url = page.url();
+    if (url.includes('__cf_chl_rt_tk') || url.includes('cf-browser-verification')) {
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Enhanced stealth setup for browser context
+async function setupStealthContext(page: Page): Promise<void> {
+  // Remove webdriver property and other automation indicators
+  await page.addInitScript(() => {
+    // Remove webdriver property
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => undefined,
+    });
+    
+    // Mock plugins
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [
+        {
+          name: 'Chrome PDF Plugin',
+          filename: 'internal-pdf-viewer',
+          description: 'Portable Document Format'
+        },
+        {
+          name: 'Chrome PDF Viewer',
+          filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+          description: ''
+        }
+      ],
+    });
+    
+    // Mock languages
+    Object.defineProperty(navigator, 'languages', {
+      get: () => ['en-US', 'en'],
+    });
+    
+    // Mock permissions
+    const originalQuery = window.navigator.permissions.query;
+    window.navigator.permissions.query = (parameters) => (
+      parameters.name === 'notifications' ?
+        Promise.resolve({ state: Notification.permission }) :
+        originalQuery(parameters)
+    );
+    
+    // Hide automation indicators
+    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+  });
+}
+
+// Session warming - visit main site first to establish session
+async function warmSession(page: Page, baseUrl: string): Promise<void> {
+  console.log('🔥 Warming session...');
+  
+  // Visit main Broadway Direct site first
+  await page.goto('https://www.broadwaydirect.com/', { 
+    waitUntil: 'domcontentloaded',
+    timeout: CONFIG.NAVIGATION_TIMEOUT 
+  });
+  
+  // Human-like browsing behavior
+  await addHumanBehavior(page);
+  await page.waitForTimeout(2000 + Math.random() * 3000);
+  
+  // Scroll around the page
+  await page.mouse.wheel(0, 300);
+  await page.waitForTimeout(1000 + Math.random() * 2000);
+  
+  // Navigate to lottery section
+  await page.goto('https://lottery.broadwaydirect.com/', { 
+    waitUntil: 'domcontentloaded',
+    timeout: CONFIG.NAVIGATION_TIMEOUT 
+  });
+  
+  await addHumanBehavior(page);
+  await page.waitForTimeout(3000 + Math.random() * 5000);
+  
+  console.log('✅ Session warmed');
+}
+
 // Utility function to retry operations
 async function retryOperation<T>(
   operation: () => Promise<T>,
@@ -68,9 +188,46 @@ async function retryOperation<T>(
       console.warn(`${operationName} failed (attempt ${attempt}/${maxRetries + 1}): ${error.message}`);
       
       if (attempt <= maxRetries) {
-        const delay = getRandomDelay();
+        const delay = getRandomDelay() * attempt; // Exponential backoff
         console.log(`Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+// Enhanced retry for form submissions with user agent rotation
+async function retryFormSubmission<T>(
+  operation: (page: Page) => Promise<T>,
+  page: Page,
+  operationName: string,
+  maxRetries: number = CONFIG.MAX_RETRIES
+): Promise<T> {
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    try {
+      // Rotate user agent on retry attempts
+      if (attempt > 1) {
+        const newUserAgent = getRandomUserAgent();
+        await page.setUserAgent(newUserAgent);
+        console.log(`🔄 Retrying with different user agent: ${newUserAgent.slice(0, 50)}...`);
+      }
+      
+      return await operation(page);
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`${operationName} failed (attempt ${attempt}/${maxRetries + 1}): ${error.message}`);
+      
+      if (attempt <= maxRetries) {
+        const delay = (getRandomDelay() * attempt) + (Math.random() * 5000); // Enhanced exponential backoff
+        console.log(`Retrying in ${delay.toFixed(0)}ms with fresh session...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        // Add extra human behavior between retries
+        await addHumanBehavior(page);
       }
     }
   }
@@ -93,10 +250,16 @@ export async function broadwayDirect({
   page.setDefaultTimeout(CONFIG.PAGE_TIMEOUT);
   page.setDefaultNavigationTimeout(CONFIG.NAVIGATION_TIMEOUT);
   
+  // Setup enhanced stealth measures
+  await setupStealthContext(page);
+  
   // Extract show name from URL for screenshot naming
   const showName = url.match(/show\/([^\/]+)/)?.[1] || "unknown";
   console.log(`Processing show: ${showName} at ${url}`);
   console.log(`Config: retries=${CONFIG.MAX_RETRIES}, delay=${CONFIG.MIN_DELAY}-${CONFIG.MAX_DELAY}ms, timeout=${CONFIG.PAGE_TIMEOUT}ms`);
+  
+  // Warm session to avoid cold start detection
+  await warmSession(page, url);
   
   let successCount = 0;
   let failureCount = 0;
@@ -184,10 +347,35 @@ export async function broadwayDirect({
       console.log(`Processing entry ${i + 1}/${hrefs.length} for ${showName}`);
       
       try {
-        // Use retry logic for the entire entry submission process
-        await retryOperation(async () => {
-          // Navigate to entry form
+        // Use enhanced retry logic for the entire entry submission process
+        await retryFormSubmission(async () => {
+          // Navigate to entry form with enhanced delay
+          await page.waitForTimeout(2000 + Math.random() * 3000); // Pre-navigation delay
           await page.goto(href, { waitUntil: 'domcontentloaded' });
+          
+          // Check for Cloudflare challenge immediately after navigation
+          if (await isCloudflareChallenge(page)) {
+            console.log(`🚫 Cloudflare challenge detected for ${showName} entry ${i + 1}`);
+            await page.screenshot({ 
+              path: join(screenshotsDir, `${showName}-cloudflare-${i}-${Date.now()}.png`),
+              fullPage: true 
+            });
+            
+            // Wait for potential challenge completion (but don't wait forever)
+            console.log('⏳ Waiting for Cloudflare challenge to resolve...');
+            await page.waitForTimeout(15000); // Give Cloudflare time to process
+            
+            // Check again if we're past the challenge
+            if (await isCloudflareChallenge(page)) {
+              throw new Error(`Cloudflare challenge persists for ${showName} entry ${i + 1}`);
+            }
+            
+            console.log('✅ Cloudflare challenge resolved');
+          }
+          
+          // Add human behavior after potential challenge
+          await addHumanBehavior(page);
+          await page.waitForTimeout(1000 + Math.random() * 2000);
           
           // Handle potential cookie banners
           try {
@@ -327,7 +515,17 @@ export async function broadwayDirect({
         
       } catch (entryError) {
         failureCount++;
-        console.error(`❌ Failed to submit entry ${i + 1} for ${showName} after ${CONFIG.MAX_RETRIES + 1} attempts: ${entryError.message}`);
+        const errorMessage = entryError.message;
+        
+        // Enhanced error categorization
+        if (errorMessage.includes('Cloudflare')) {
+          console.error(`🚫 CLOUDFLARE BLOCKED: Entry ${i + 1} for ${showName} - ${errorMessage}`);
+          console.error(`💡 Consider adjusting anti-detection settings or retry timing`);
+        } else if (errorMessage.includes('timeout')) {
+          console.error(`⏰ TIMEOUT: Entry ${i + 1} for ${showName} - ${errorMessage}`);
+        } else {
+          console.error(`❌ Failed to submit entry ${i + 1} for ${showName} after ${CONFIG.MAX_RETRIES + 1} attempts: ${errorMessage}`);
+        }
         
         // Take error screenshot
         try {
