@@ -179,6 +179,51 @@ async function setupStealthContext(page: Page): Promise<void> {
   });
 }
 
+// Handle email signup modal that blocks navigation completion
+async function dismissEmailModal(page: Page): Promise<boolean> {
+  try {
+    console.log('🔍 Checking for email signup modal...');
+    
+    // Common modal selectors for "BE THE FIRST TO KNOW" popup
+    const modalSelectors = [
+      '[class*="modal"] button[class*="close"]',
+      '[class*="modal"] [aria-label="Close"]',
+      '[class*="modal"] .close',
+      '[class*="popup"] button[class*="close"]',
+      'button:has-text("×")',
+      'button:has-text("Close")',
+      '[data-dismiss="modal"]',
+      '.modal-close',
+      '#modal-close'
+    ];
+    
+    // Wait briefly for modal to appear
+    await page.waitForTimeout(2000);
+    
+    // Try to find and close the modal
+    for (const selector of modalSelectors) {
+      const closeButton = page.locator(selector).first();
+      if (await closeButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+        console.log(`📱 Found modal close button: ${selector}`);
+        await closeButton.click();
+        await page.waitForTimeout(1000); // Wait for modal to close
+        console.log('✅ Email modal dismissed');
+        return true;
+      }
+    }
+    
+    // Try clicking outside modal to dismiss
+    await page.mouse.click(100, 100);
+    await page.waitForTimeout(500);
+    
+    console.log('ℹ️ No modal found or could not dismiss');
+    return false;
+  } catch (error) {
+    console.log(`⚠️ Modal dismissal error: ${error.message}`);
+    return false;
+  }
+}
+
 // Session warming - visit main site first to establish session
 async function warmSession(page: Page, targetUrl: string): Promise<void> {
   console.log('🔥 Warming session with natural browsing...');
@@ -199,11 +244,14 @@ async function warmSession(page: Page, targetUrl: string): Promise<void> {
     'Referer': referrer
   });
   
-  // Visit main Broadway Direct site first
+  // Visit main Broadway Direct site first with faster loading strategy
   await page.goto('https://www.broadwaydirect.com/', { 
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',  // Changed from networkidle to domcontentloaded
     timeout: CONFIG.NAVIGATION_TIMEOUT 
   });
+  
+  // Handle the email signup modal that blocks networkidle
+  await dismissEmailModal(page);
   
   console.log(`📍 Landed on main site with referrer: ${referrer}`);
   
@@ -240,19 +288,25 @@ async function warmSession(page: Page, targetUrl: string): Promise<void> {
     if (await lotteryLink.isVisible({ timeout: 5000 })) {
       console.log('📍 Clicking lottery link...');
       await lotteryLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');  // Changed from networkidle
+      // Handle modal on lottery page after navigation
+      await dismissEmailModal(page);
     } else {
       // Fallback to direct navigation
       await page.goto('https://lottery.broadwaydirect.com/', { 
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',  // Changed from networkidle
         timeout: CONFIG.NAVIGATION_TIMEOUT 
       });
+      // Handle modal on lottery page
+      await dismissEmailModal(page);
     }
   } catch (e) {
     await page.goto('https://lottery.broadwaydirect.com/', { 
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',  // Changed from networkidle
       timeout: CONFIG.NAVIGATION_TIMEOUT 
     });
+    // Handle modal on lottery page
+    await dismissEmailModal(page);
   }
   
   // Quick check for Cloudflare on lottery page
@@ -431,6 +485,9 @@ export async function broadwayDirect({
       );
     }
     
+    // Handle any modals on the show landing page
+    await dismissEmailModal(page);
+    
     // Take initial screenshot
     await page.screenshot({ 
       path: join(screenshotsDir, `${showName}-landing-${Date.now()}.png`),
@@ -531,6 +588,9 @@ export async function broadwayDirect({
             
             console.log('✅ Cloudflare challenge resolved');
           }
+          
+          // Handle any modals on the form page
+          await dismissEmailModal(page);
           
           // Add human behavior after potential challenge
           await addHumanBehavior(page);
