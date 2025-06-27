@@ -149,6 +149,8 @@ const formElements = {
 3. **Form Behavior**: Added realistic reading/review pauses
 4. **Timeouts**: Increased to 45s page timeout for patient behavior
 5. **Error Handling**: Fail fast with clear "automation behavior needs adjustment" message
+6. **Landing Page Behavior**: 15-30 seconds of realistic browsing before entry attempts
+7. **Entry Approach**: Human-like button hovering and decision-making process
 
 ## Enhanced Debugging System (2025-01-27)
 

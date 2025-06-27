@@ -172,6 +172,113 @@ async function waitBetweenEntries(showName: string, entryNumber: number): Promis
   await new Promise(resolve => setTimeout(resolve, delay));
 }
 
+// Simulate realistic human behavior on landing pages before entering lotteries
+async function simulateHumanLandingPageBehavior(page: Page, showName: string): Promise<void> {
+  console.log(`👀 Simulating human browsing behavior on ${showName} landing page...`);
+  
+  try {
+    // Extended reading time - humans spend time reading show info
+    console.log(`📖 Reading show information for ${showName}...`);
+    await page.waitForTimeout(3000 + Math.random() * 5000); // 3-8 seconds initial read
+    
+    // Realistic scrolling behavior
+    console.log(`📜 Scrolling through ${showName} page content...`);
+    const viewportHeight = 1080; // Default viewport height
+    
+    // Scroll down slowly like a human reading
+    for (let i = 0; i < 3; i++) {
+      const scrollAmount = 200 + Math.random() * 300; // 200-500px
+      await page.mouse.wheel(0, scrollAmount);
+      await page.waitForTimeout(1000 + Math.random() * 2000); // Pause to "read"
+      
+      // Add random mouse movements while reading
+      await addHumanBehavior(page);
+    }
+    
+    // Scroll back to top to see lottery options
+    await page.mouse.wheel(0, -800);
+    await page.waitForTimeout(1000 + Math.random() * 2000);
+    
+    // Simulate examining lottery options - hover over lottery information
+    console.log(`🎟️ Examining lottery options for ${showName}...`);
+    
+    // Look for lottery container elements to hover over
+    const lotteryContainers = await page.locator('[class*="lottery"], [class*="entry"], .entry-item, [id*="lottery"]').all();
+    
+    if (lotteryContainers.length > 0) {
+      // Hover over 1-2 lottery containers as if examining them
+      const containersToExamine = Math.min(2, lotteryContainers.length);
+      for (let i = 0; i < containersToExamine; i++) {
+        try {
+          await lotteryContainers[i].hover();
+          await page.waitForTimeout(2000 + Math.random() * 3000); // 2-5 seconds examining
+          console.log(`🔍 Examined lottery option ${i + 1} for ${showName}`);
+        } catch (error) {
+          // Continue if hover fails
+        }
+      }
+    }
+    
+    // Final decision-making pause
+    console.log(`🤔 Making entry decision for ${showName}...`);
+    await page.waitForTimeout(2000 + Math.random() * 4000); // 2-6 seconds deciding
+    
+    console.log(`✅ Completed realistic browsing simulation for ${showName} (total ~15-30 seconds)`);
+    
+  } catch (error) {
+    console.log(`⚠️ Error during landing page simulation for ${showName}: ${error.message}`);
+    // Continue anyway - this is enhancement, not critical
+  }
+}
+
+// Human-like approach to clicking "Enter Now" buttons with realistic decision process
+async function clickEnterButtonWithHumanBehavior(page: Page, showName: string, buttonIndex: number): Promise<string | null> {
+  console.log(`🎯 Approaching entry ${buttonIndex + 1} for ${showName} with human-like behavior...`);
+  
+  try {
+    // Get the Enter Now button
+    const enterButtons = await page.getByRole("link", { name: /Enter Now/i }).all();
+    if (buttonIndex >= enterButtons.length) {
+      throw new Error(`Button ${buttonIndex + 1} not found`);
+    }
+    
+    const button = enterButtons[buttonIndex];
+    
+    // Human-like approach: move mouse toward button area first
+    console.log(`🖱️ Moving mouse toward entry button ${buttonIndex + 1} for ${showName}...`);
+    const buttonBox = await button.boundingBox();
+    if (buttonBox) {
+      // Move mouse near the button (not exactly on it yet)
+      const nearX = buttonBox.x + buttonBox.width * 0.3;
+      const nearY = buttonBox.y + buttonBox.height * 0.3;
+      await page.mouse.move(nearX, nearY);
+      await page.waitForTimeout(500 + Math.random() * 1000); // Pause as if locating button
+      
+      // Now hover over the button
+      await button.hover();
+      console.log(`⏸️ Hovering over entry button ${buttonIndex + 1} for ${showName}...`);
+      await page.waitForTimeout(1000 + Math.random() * 2000); // 1-3 seconds hover (human decision time)
+    }
+    
+    // Final decision pause before clicking
+    console.log(`💭 Final decision pause before entering ${showName} lottery ${buttonIndex + 1}...`);
+    await page.waitForTimeout(800 + Math.random() * 1500); // 0.8-2.3 seconds final decision
+    
+    // Get the href before clicking
+    const href = await button.getAttribute("href");
+    
+    // Click with human timing
+    console.log(`🖱️ Clicking Enter Now button for ${showName} entry ${buttonIndex + 1}...`);
+    await button.click();
+    
+    return href;
+    
+  } catch (error) {
+    console.log(`⚠️ Error with human-like button click for ${showName}: ${error.message}`);
+    throw error;
+  }
+}
+
 // Enhanced debugging function to capture page state
 async function capturePageState(page: Page, showName: string, stage: string, entryIndex?: number): Promise<void> {
   try {
@@ -197,10 +304,11 @@ async function capturePageState(page: Page, showName: string, stage: string, ent
     console.log(`   📄 Title: ${title}`);
     console.log(`   🤖 User Agent: ${userAgent.slice(0, 80)}...`);
     
-    // Check for common error indicators
+    // Check for common error indicators (be more specific to avoid false positives)
     const bodyText = await page.locator('body').textContent().catch(() => '');
     const hasCloudflare = bodyText.includes('Cloudflare') || bodyText.includes('Just a moment') || bodyText.includes('Verifying you are human');
-    const hasError = bodyText.includes('Error') || bodyText.includes('error') || bodyText.includes('404') || bodyText.includes('500');
+    // More specific error detection - avoid false positives from normal page content
+    const hasError = bodyText.includes('Error 404') || bodyText.includes('Error 500') || bodyText.includes('Internal Server Error') || bodyText.includes('Not Found');
     const isEmpty = bodyText.trim().length < 100;
     
     if (hasCloudflare) console.log(`   🚫 Cloudflare indicators detected`);
@@ -572,7 +680,7 @@ export async function broadwayDirect({
   
   let successCount = 0;
   let failureCount = 0;
-  let hrefs: (string | null)[] = []; // Declare hrefs in outer scope
+  let enterNowButtons: any[] = []; // Declare enterNowButtons in outer scope
   
   try {
     // Try to navigate via clicking on show link if we're on lottery page
@@ -626,7 +734,7 @@ export async function broadwayDirect({
     console.log(`Checking lottery availability for ${showName}...`);
     
     // Look for "Enter Now" buttons (open lotteries)
-    const enterNowButtons = await page.getByRole("link", { name: /Enter Now/i }).all();
+    enterNowButtons = await page.getByRole("link", { name: /Enter Now/i }).all();
     
     // Look for closed/upcoming indicators
     const closedButtons = await page.getByRole("link", { name: /(Closed|Upcoming)/i }).all();
@@ -662,45 +770,34 @@ export async function broadwayDirect({
       }
     }
     
-    // Lottery is open - get the Enter Now links with retry (for technical failures only)
-    const linkData = await retryOperation(async () => {
-      const links = await page.getByRole("link", { name: /Enter Now/i }).all();
-      const hrefs = await Promise.all(
-        links.map((link) => link.getAttribute("href"))
-      );
-      
-      // Filter out null hrefs
-      const validHrefs = hrefs.filter(href => href !== null);
-      
-      // This should not happen since we already found Enter Now buttons above
-      if (validHrefs.length === 0) {
-        throw new Error("Enter Now buttons disappeared - possible page timing issue");
-      }
-      
-      return { links, hrefs: validHrefs };
-    }, `Get lottery entry links for ${showName}`);
+    // CRITICAL: Add realistic human behavior before attempting lottery entries
+    await simulateHumanLandingPageBehavior(page, showName);
     
-    hrefs = linkData.hrefs; // Assign to outer scope variable
-    console.log(`✅ Found ${hrefs.length} open lottery entries for ${showName}`);
+    // Capture state after human behavior simulation
+    await capturePageState(page, showName, 'post-human-behavior');
+    
+    console.log(`✅ Found ${enterNowButtons.length} open lottery entries for ${showName}`);
 
-    // Process each lottery entry
-    for (let i = 0; i < hrefs.length; i++) {
-      const href = hrefs[i];
-      if (!href) {
-        continue;
-      }
-      
-      console.log(`Processing entry ${i + 1}/${hrefs.length} for ${showName}`);
+    // Process each lottery entry with enhanced human behavior
+    for (let i = 0; i < enterNowButtons.length; i++) {
+      console.log(`Processing entry ${i + 1}/${enterNowButtons.length} for ${showName}`);
       
       try {
-        // Navigate to entry form with human-like delay
-        console.log(`🎯 Navigating to entry ${i + 1} for ${showName}...`);
-        await page.waitForTimeout(3000 + Math.random() * 4000); // More human-like pre-navigation delay
+        // Use human-like button clicking approach instead of direct navigation
+        console.log(`🎯 Using human-like approach for entry ${i + 1} for ${showName}...`);
         
-        await retryOperation(
-          () => page.goto(href, { waitUntil: 'domcontentloaded' }),
-          `Navigate to ${showName} entry ${i + 1}`
-        );
+        // Add inter-entry delay if this isn't the first entry
+        if (i > 0) {
+          console.log(`⏸️ Brief pause between entries for ${showName}...`);
+          await page.waitForTimeout(3000 + Math.random() * 5000); // 3-8 seconds between entries
+        }
+        
+        // Click the button using human-like behavior
+        const href = await clickEnterButtonWithHumanBehavior(page, showName, i);
+        
+        // Wait for navigation to complete
+        await page.waitForLoadState('domcontentloaded');
+        console.log(`📍 Navigation completed for ${showName} entry ${i + 1}`);
         
         // FAIL FAST: Check for Cloudflare challenge - if detected, our approach is wrong
         if (await isCloudflareChallenge(page)) {
@@ -775,14 +872,14 @@ export async function broadwayDirect({
     }
     
     // Log summary for this show
-    const totalEntries = hrefs.length;
+    const totalEntries = enterNowButtons.length;
     console.log(`\n📊 ${showName.toUpperCase()} SUMMARY:`);
     console.log(`   ✅ Successful: ${successCount}/${totalEntries}`);
     console.log(`   ❌ Failed: ${failureCount}/${totalEntries}`);
     console.log(`   📈 Success Rate: ${totalEntries > 0 ? Math.round((successCount / totalEntries) * 100) : 0}%`);
     
   } catch (error) {
-    const totalEntries = hrefs.length || 1; // Use the outer scope hrefs variable
+    const totalEntries = enterNowButtons.length || 1; // Use the correct buttons array
     failureCount = totalEntries; // Count all as failures if fatal error
     console.error(`💥 Fatal error processing ${showName}: ${error.message}`);
     
