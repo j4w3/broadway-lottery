@@ -16,19 +16,7 @@ const CONFIG = {
   NAVIGATION_TIMEOUT: parseInt(process.env.NAVIGATION_TIMEOUT || "90000"), // Increased patience
 };
 
-// Randomized user agents for retry attempts
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'
-];
-
-// Get random user agent
-function getRandomUserAgent(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-}
+// Note: User agent rotation now handled automatically by Camoufox
 
 // Ensure screenshots directory exists
 const screenshotsDir = join(process.cwd(), "screenshots");
@@ -360,50 +348,7 @@ async function logFormElementsState(page: Page, showName: string, entryIndex?: n
   }
 }
 
-// Enhanced stealth setup for browser context
-async function setupStealthContext(page: Page): Promise<void> {
-  // Remove webdriver property and other automation indicators
-  await page.addInitScript(() => {
-    // Remove webdriver property
-    Object.defineProperty(navigator, 'webdriver', {
-      get: () => undefined,
-    });
-    
-    // Mock plugins
-    Object.defineProperty(navigator, 'plugins', {
-      get: () => [
-        {
-          name: 'Chrome PDF Plugin',
-          filename: 'internal-pdf-viewer',
-          description: 'Portable Document Format'
-        },
-        {
-          name: 'Chrome PDF Viewer',
-          filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
-          description: ''
-        }
-      ],
-    });
-    
-    // Mock languages
-    Object.defineProperty(navigator, 'languages', {
-      get: () => ['en-US', 'en'],
-    });
-    
-    // Mock permissions
-    const originalQuery = window.navigator.permissions.query;
-    window.navigator.permissions.query = (parameters) => (
-      parameters.name === 'notifications' ?
-        Promise.resolve({ state: Notification.permission }) :
-        originalQuery(parameters)
-    );
-    
-    // Hide automation indicators
-    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
-    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
-    delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-  });
-}
+// Note: Stealth measures now handled automatically by Camoufox at C++ level
 
 // Handle email signup modal that blocks navigation completion
 async function dismissEmailModal(page: Page): Promise<boolean> {
@@ -607,13 +552,7 @@ async function retryFormSubmission<T>(
   
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
-      // Rotate user agent on retry attempts
-      if (attempt > 1) {
-        const newUserAgent = getRandomUserAgent();
-        await page.setUserAgent(newUserAgent);
-        console.log(`🔄 Retrying with different user agent: ${newUserAgent.slice(0, 50)}...`);
-      }
-      
+      // Note: User agent rotation handled automatically by Camoufox
       return await operation(page);
     } catch (error) {
       lastError = error as Error;
@@ -636,28 +575,18 @@ async function retryFormSubmission<T>(
 export async function broadwayDirect({ 
   browser, 
   userInfo, 
-  url,
-  viewport 
+  url 
 }: { 
   browser: Browser; 
   userInfo: UserInfo; 
   url: string;
-  viewport?: { width: number; height: number };
 }) {
-  // Create isolated browser context for this show
+  // Create isolated browser context - Camoufox automatically handles fingerprinting
   const context = await browser.newContext({
-    viewport: viewport || { width: 1920, height: 1080 },
-    userAgent: getRandomUserAgent(),
-    // Accept cookies
+    // Camoufox handles viewport, userAgent, locale, timezone automatically
+    // Only set essential non-fingerprint settings
     acceptDownloads: false,
-    hasTouch: false,
-    isMobile: false,
     javaScriptEnabled: true,
-    locale: 'en-US',
-    timezoneId: 'America/New_York',
-    // Additional permissions
-    permissions: ['geolocation'],
-    geolocation: { latitude: 40.7128, longitude: -74.0060 }, // NYC
   });
   
   // Simulate tab behavior for more natural browsing
@@ -667,8 +596,7 @@ export async function broadwayDirect({
   page.setDefaultTimeout(CONFIG.PAGE_TIMEOUT);
   page.setDefaultNavigationTimeout(CONFIG.NAVIGATION_TIMEOUT);
   
-  // Setup enhanced stealth measures
-  await setupStealthContext(page);
+  // Note: Stealth measures automatically handled by Camoufox
   
   // Extract show name from URL for screenshot naming
   const showName = url.match(/show\/([^\/]+)/)?.[1] || "unknown";

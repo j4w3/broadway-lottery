@@ -16,7 +16,8 @@ Broadway Lottery is a Playwright-based automation tool that enters users into Br
 
 ### Technology Stack
 - **TypeScript** with Babel transpilation (no tsconfig.json)
-- **Playwright** for browser automation with stealth plugin to avoid detection
+- **Camoufox** - Anti-detection Firefox browser for undetectable automation
+- **Playwright** for browser automation API
 - **Jest** for unit tests, **Playwright Test** for E2E tests
 - **GitHub Actions** for daily automated runs
 
@@ -151,6 +152,33 @@ const formElements = {
 5. **Error Handling**: Fail fast with clear "automation behavior needs adjustment" message
 6. **Landing Page Behavior**: 15-30 seconds of realistic browsing before entry attempts
 7. **Entry Approach**: Human-like button hovering and decision-making process
+8. **Anti-Detection Upgrade**: Replaced custom stealth with Camoufox professional solution
+
+## Camoufox Anti-Detection System (2025-01-27)
+
+### Why Camoufox?
+Replaced custom JavaScript-based stealth measures with **Camoufox** - a purpose-built anti-detection browser that operates at the C++ level for undetectable automation.
+
+### Camoufox Advantages Over Previous Approach
+- **C++ Level Fingerprinting**: Spoofs browser characteristics at implementation level (vs JavaScript)
+- **Professional Solution**: Designed specifically for bypassing sophisticated bot detection
+- **Automatic Fingerprint Generation**: Realistic device characteristics without manual configuration
+- **Font Fingerprinting Protection**: Randomizes font metrics to prevent detection
+- **Playwright Invisibility**: Makes Playwright completely undetectable to JavaScript inspection
+
+### Current Implementation
+- **Browser Engine**: Custom Firefox build with anti-detection features
+- **OS Rotation**: Random windows/macos/linux fingerprints per show
+- **Automatic Stealth**: All fingerprinting handled transparently by Camoufox
+- **No Manual Configuration**: Camoufox generates realistic user agents, viewports, fonts, etc.
+
+### Removed Custom Stealth Measures
+Since Camoufox handles everything automatically, removed:
+- Manual user agent rotation
+- Custom viewport management  
+- JavaScript-based webdriver property hiding
+- Manual navigator property spoofing
+- Custom browser argument injection
 
 ## Enhanced Debugging System (2025-01-27)
 

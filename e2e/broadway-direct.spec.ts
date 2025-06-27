@@ -1,5 +1,5 @@
 import { test } from "@playwright/test";
-import { chromium } from "@playwright/test";
+import { Camoufox } from "camoufox-js";
 import { getUserInfo } from "../src/get-user-info";
 import { broadwayDirect } from "../src/broadway-direct";
 
@@ -36,25 +36,8 @@ const batches = [
   shuffledUrls.slice(5)      // Batch 3: Last 2 shows
 ];
 
-// User agents for rotation
-const userAgents = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15'
-];
-
-// Viewport sizes for randomization
-const viewports = [
-  { width: 1920, height: 1080 },
-  { width: 1366, height: 768 },
-  { width: 1440, height: 900 },
-  { width: 1536, height: 864 },
-  { width: 1680, height: 1050 },
-  { width: 1280, height: 720 },
-  { width: 1600, height: 900 }
-];
+// OS types for Camoufox fingerprint rotation
+const osTypes = ['windows', 'macos', 'linux'];
 
 // Use serial execution with smart delays to maintain performance
 test.describe.serial('Broadway lottery entries', () => {
@@ -84,45 +67,27 @@ test.describe.serial('Broadway lottery entries', () => {
     // In CI, run headless; locally, run headful for debugging
     const headless = process.env.CI === 'true';
     
-    // Random viewport and user agent for each show
-    const viewport = viewports[Math.floor(Math.random() * viewports.length)];
-    const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-    console.log(`🔧 Using viewport: ${viewport.width}x${viewport.height}, UA: ${userAgent.split(' ')[5] || 'Custom'}`);
-    
-    // Random browser arguments for more variation
-    const randomArgs = [
-      '--disable-blink-features=AutomationControlled',
-      '--disable-features=VizDisplayCompositor',
-      '--disable-ipc-flooding-protection',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
-      '--disable-field-trial-config',
-      '--disable-background-networking'
-    ];
+    // Random OS for Camoufox fingerprint generation
+    const randomOS = osTypes[Math.floor(Math.random() * osTypes.length)];
+    console.log(`🦊 Using Camoufox with ${randomOS} fingerprint and automated anti-detection`);
     
 let browser;
     try {
-      browser = await chromium.launch({ 
+      browser = await Camoufox({
         headless,
         timeout: 30000,
-        // Enhanced anti-detection browser arguments with randomization
-        args: [
-          '--no-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-web-security',
-          '--no-default-browser-check',
-          '--no-first-run',
-          '--password-store=basic',
-          '--use-mock-keychain',
-          '--disable-component-extensions-with-background-pages',
-          '--disable-default-apps',
-          '--mute-audio',
-          '--no-zygote',
-          `--user-agent=${userAgent}`,
-          `--window-size=${viewport.width},${viewport.height}`,
-          ...randomArgs.slice(0, Math.floor(Math.random() * 4) + 2) // Random subset of stealth args
-        ]
+        // Enhanced Camoufox configuration for maximum stealth
+        os: randomOS, // Random OS fingerprint (windows/macos/linux)
+        // Let Camoufox automatically generate realistic:
+        // - User agents matching the OS
+        // - Screen resolutions and viewport sizes
+        // - Font lists and font metrics
+        // - Navigator properties
+        // - Timezone and locale
+        // - Device characteristics
+        // - Hardware concurrency
+        // - Memory info
+        // All at C++ level for undetectable fingerprints
       });
     } catch (browserError) {
       console.error(`Failed to launch browser for ${url}:`, browserError);
@@ -130,7 +95,7 @@ let browser;
     }
     
     try {
-      await broadwayDirect({ browser, userInfo, url, viewport });
+      await broadwayDirect({ browser, userInfo, url });
     } catch (error) {
       const showName = url.match(/show\/([^\/]+)/)?.[1] || "unknown";
       console.error(`💥 [${showName}] Failed to complete lottery signup:`, {
