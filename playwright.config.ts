@@ -19,9 +19,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   /* Use single worker for reliable serial execution */
   workers: process.env.CI ? 1 : undefined,
-  /* Reasonable timeouts for anti-detection measures */
-  timeout: 3 * 60 * 1000, // 3 minutes per test
-  globalTimeout: 15 * 60 * 1000, // 15 minutes total
+  /* Extended timeouts for challenge resolution */
+  timeout: 5 * 60 * 1000, // 5 minutes per test (allows for challenge resolution)
+  globalTimeout: 20 * 60 * 1000, // 20 minutes total
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -34,9 +34,9 @@ export default defineConfig({
     viewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true,
     
-    /* Human-like timeouts */
-    actionTimeout: 30000,
-    navigationTimeout: 90000,
+    /* Extended timeouts for challenge resolution */
+    actionTimeout: 45000, // Increased for form interactions after challenges
+    navigationTimeout: 120000, // Extended for challenge resolution
     
     /* Additional stealth settings */
     javaScriptEnabled: true,

@@ -77,8 +77,9 @@ P2 variants (e.g., `P2_FIRST_NAME`) for second person.
 
 ## Development Guidelines
 
-- When modifying lottery logic, test thoroughly with `npm run playwright` before committing
-- Maintain stealth measures (random delays, non-headless mode in dev)
+- **IMPORTANT**: Cannot test E2E locally - testing must be done via GitHub Actions
+- When modifying lottery logic, push to GitHub and test via Actions workflow
+- Maintain stealth measures (random delays, non-headless mode in CI)
 - Keep show URLs up to date in the test spec
 - Ensure all personal information stays in GitHub secrets, never in code
 - The project is designed for GitHub Actions automation, not continuous local development
@@ -101,3 +102,90 @@ P2 variants (e.g., `P2_FIRST_NAME`) for second person.
 - Circuit breaker stops all tests if access issues detected
 - Enhanced error detection and diagnostic screenshots
 - Randomized browser profiles to appear more natural
+
+## Current Strategy: Prevention-First Approach (2025-01-27)
+
+### CORE PHILOSOPHY: Avoid Cloudflare Challenges, Don't Retry After Getting Them
+**Implementation Date**: 2025-01-27
+**Status**: Testing in production via GitHub Actions
+
+**Key Insight**: If we get Cloudflare challenges, our automation behavior is detectable. The solution is to be more human-like, not to retry after getting caught.
+
+### NEW APPROACH: Human-Like Behavior
+**Longer Delays**: 5-12 seconds between entries (vs previous 1-3 seconds)
+**Fail Fast**: Cloudflare challenge = immediate failure with clear error message
+**More Natural Form Filling**: Realistic pauses, "reading" behavior, form review steps
+**Reduced Retries**: Only 1 retry for technical issues, 0 retries for Cloudflare
+
+**Form Element Selectors** (Direct ID targeting):
+```typescript
+const formElements = {
+  firstName: page.locator("#dlslot_name_first"),
+  lastName: page.locator("#dlslot_name_last"),  
+  tickets: page.locator("#dlslot_ticket_qty"),
+  email: page.locator("#dlslot_email"),
+  zip: page.locator("#dlslot_zip"),
+  country: page.locator("#dlslot_country"),
+  agree: page.locator("#dlslot_agree"),
+  submit: page.locator('input[type="submit"]')
+};
+```
+
+**Human-Like Form Filling**:
+- 2-5 second "reading" pause before filling
+- 300-800ms delays between fields
+- "Review" behavior before agreeing to terms
+- 500-1000ms final pause before submission
+
+**Country Selection**: Uses option values (USA=2, CANADA=3, OTHER=5)
+
+### FALLBACK METHOD: Label-Based Targeting  
+**Previous Implementation**: Used `page.getByLabel()` selectors
+**Use If**: Direct ID selectors fail due to site changes
+
+### Key Changes Made (2025-01-27)
+1. **Philosophy**: Prevention over recovery - don't retry Cloudflare challenges
+2. **Delays**: Increased to 5-12 seconds between entries for human pacing
+3. **Form Behavior**: Added realistic reading/review pauses
+4. **Timeouts**: Increased to 45s page timeout for patient behavior
+5. **Error Handling**: Fail fast with clear "automation behavior needs adjustment" message
+
+## Enhanced Debugging System (2025-01-27)
+
+### Comprehensive Screenshot Strategy
+**Screenshots captured at every major step**:
+- `{show}-landing-ready-{timestamp}.png` - After modal handling
+- `{show}-no-lotteries-{timestamp}.png` - When no lotteries found (for debugging)
+- `{show}-entry-navigated-{entry}-{timestamp}.png` - After navigating to entry form
+- `{show}-form-initial-{entry}-{timestamp}.png` - Form page loaded
+- `{show}-form-filled-{entry}-{timestamp}.png` - Form completed, before submit
+- `{show}-form-submitted-{entry}-{timestamp}.png` - After submission
+- `{show}-cloudflare-{entry}-{timestamp}.png` - If Cloudflare challenge detected
+- `{show}-error-{entry}-{timestamp}.png` - On any error
+- `{show}-fatal-error-{timestamp}.png` - On fatal errors
+
+### Enhanced Logging Information
+**For each screenshot**, logs include:
+- Current URL and page title
+- User agent being used
+- Page content analysis (Cloudflare indicators, errors, empty pages)
+- Form elements state (visible, enabled, current values)
+
+**Form Element Validation**:
+- Checks visibility and enabled state of all form fields
+- Reports current values for debugging
+- Uses ✅ (visible+enabled), 🔒 (visible+disabled), ❌ (not found) indicators
+
+### Debugging Benefits
+- **Visual confirmation** of what the automation sees at each step
+- **Form validation** to identify missing or changed selectors
+- **Cloudflare detection** with visual proof of challenge pages
+- **Error correlation** between logs and visual state
+- **Progress tracking** through the entire submission process
+
+### Usage for Troubleshooting
+1. **Check landing-ready screenshots** for initial page state
+2. **Review form-initial screenshots** to verify form elements exist
+3. **Examine form-filled screenshots** to confirm data entry
+4. **Analyze error screenshots** to understand failure points
+5. **Cross-reference logs** with visual evidence in screenshots

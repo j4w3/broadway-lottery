@@ -3,17 +3,17 @@ import { UserInfo } from "./types";
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
-// Configuration constants
+// Configuration constants - more human-like defaults
 const CONFIG = {
-  // Number of retry attempts for failed operations
-  MAX_RETRIES: parseInt(process.env.MAX_RETRIES || "2"),
+  // Number of retry attempts for failed operations (only for technical issues, not Cloudflare)
+  MAX_RETRIES: parseInt(process.env.MAX_RETRIES || "1"), // Reduced retries since we fail fast on Cloudflare
   // Base timeout for page operations (ms)
-  PAGE_TIMEOUT: parseInt(process.env.PAGE_TIMEOUT || "30000"),
-  // Random delay range (ms)
-  MIN_DELAY: parseInt(process.env.MIN_DELAY || "1000"),
-  MAX_DELAY: parseInt(process.env.MAX_DELAY || "3000"),
+  PAGE_TIMEOUT: parseInt(process.env.PAGE_TIMEOUT || "45000"), // Increased for more patient behavior
+  // Random delay range (ms) - much more human-like
+  MIN_DELAY: parseInt(process.env.MIN_DELAY || "5000"), // Minimum 5 seconds between entries
+  MAX_DELAY: parseInt(process.env.MAX_DELAY || "12000"), // Maximum 12 seconds between entries
   // Network timeout for navigation
-  NAVIGATION_TIMEOUT: parseInt(process.env.NAVIGATION_TIMEOUT || "60000"),
+  NAVIGATION_TIMEOUT: parseInt(process.env.NAVIGATION_TIMEOUT || "90000"), // Increased patience
 };
 
 // Randomized user agents for retry attempts
@@ -56,12 +56,27 @@ async function humanLikeType(page: Page, selector: string, text: string): Promis
 
 // Add random mouse movements for more human-like behavior
 async function addHumanBehavior(page: Page): Promise<void> {
-  // Random viewport movements - use default viewport dimensions
-  const viewport = { width: 1920, height: 1080 }; // Default fallback
-  const x = Math.floor(Math.random() * viewport.width);
-  const y = Math.floor(Math.random() * viewport.height);
-  await page.mouse.move(x, y);
-  await page.waitForTimeout(100 + Math.random() * 300);
+  try {
+    // Check if page is still valid
+    if (!page || page.isClosed()) {
+      console.log('⚠️ Page context invalid, skipping human behavior simulation');
+      return;
+    }
+    
+    // Random viewport movements - use default viewport dimensions
+    const viewport = { width: 1920, height: 1080 }; // Default fallback
+    const x = Math.floor(Math.random() * viewport.width);
+    const y = Math.floor(Math.random() * viewport.height);
+    
+    // Safely attempt mouse movement
+    if (page.mouse) {
+      await page.mouse.move(x, y);
+      await page.waitForTimeout(100 + Math.random() * 300);
+    }
+  } catch (error) {
+    console.log('⚠️ Human behavior simulation error:', error.message);
+    // Continue execution even if mouse movement fails
+  }
 }
 
 // Simulate tab behavior with multiple pages
@@ -147,6 +162,93 @@ async function isCloudflareChallenge(page: Page): Promise<boolean> {
     return false;
   } catch (error) {
     return false;
+  }
+}
+
+// More natural delay between entries to avoid appearing automated
+async function waitBetweenEntries(showName: string, entryNumber: number): Promise<void> {
+  const delay = getRandomDelay();
+  console.log(`⏳ Waiting ${delay/1000}s before next entry for ${showName}... (human pacing)`);
+  await new Promise(resolve => setTimeout(resolve, delay));
+}
+
+// Enhanced debugging function to capture page state
+async function capturePageState(page: Page, showName: string, stage: string, entryIndex?: number): Promise<void> {
+  try {
+    const timestamp = Date.now();
+    const entryStr = entryIndex !== undefined ? `-${entryIndex}` : '';
+    const screenshotPath = join(screenshotsDir, `${showName}-${stage}${entryStr}-${timestamp}.png`);
+    
+    console.log(`📸 Capturing ${stage} state for ${showName}${entryIndex ? ` entry ${entryIndex}` : ''}`);
+    
+    // Take screenshot
+    await page.screenshot({ 
+      path: screenshotPath,
+      fullPage: true 
+    });
+    
+    // Log comprehensive page state
+    const url = page.url();
+    const title = await page.title().catch(() => 'Unable to get title');
+    const userAgent = await page.evaluate(() => navigator.userAgent).catch(() => 'Unable to get UA');
+    
+    console.log(`📊 Page State [${stage}]:`);
+    console.log(`   🔗 URL: ${url}`);
+    console.log(`   📄 Title: ${title}`);
+    console.log(`   🤖 User Agent: ${userAgent.slice(0, 80)}...`);
+    
+    // Check for common error indicators
+    const bodyText = await page.locator('body').textContent().catch(() => '');
+    const hasCloudflare = bodyText.includes('Cloudflare') || bodyText.includes('Just a moment') || bodyText.includes('Verifying you are human');
+    const hasError = bodyText.includes('Error') || bodyText.includes('error') || bodyText.includes('404') || bodyText.includes('500');
+    const isEmpty = bodyText.trim().length < 100;
+    
+    if (hasCloudflare) console.log(`   🚫 Cloudflare indicators detected`);
+    if (hasError) console.log(`   ❌ Error indicators detected`);
+    if (isEmpty) console.log(`   ⚠️ Page appears nearly empty (${bodyText.trim().length} chars)`);
+    
+    // Log visible form elements if this is a form page
+    if (stage.includes('form') || stage.includes('entry')) {
+      await logFormElementsState(page, showName, entryIndex);
+    }
+    
+    console.log(`   📸 Screenshot saved: ${screenshotPath}`);
+    
+  } catch (error) {
+    console.log(`⚠️ Error capturing page state for ${stage}: ${error.message}`);
+  }
+}
+
+// Log form elements state for debugging
+async function logFormElementsState(page: Page, showName: string, entryIndex?: number): Promise<void> {
+  console.log(`📝 Form Elements State for ${showName}${entryIndex ? ` entry ${entryIndex}` : ''}:`);
+  
+  const formElements = [
+    { name: 'firstName', selector: '#dlslot_name_first' },
+    { name: 'lastName', selector: '#dlslot_name_last' },
+    { name: 'tickets', selector: '#dlslot_ticket_qty' },
+    { name: 'email', selector: '#dlslot_email' },
+    { name: 'zip', selector: '#dlslot_zip' },
+    { name: 'country', selector: '#dlslot_country' },
+    { name: 'dobMonth', selector: '#dlslot_dob_month' },
+    { name: 'dobDay', selector: '#dlslot_dob_day' },
+    { name: 'dobYear', selector: '#dlslot_dob_year' },
+    { name: 'agree', selector: '#dlslot_agree' },
+    { name: 'submit', selector: 'input[type="submit"]' }
+  ];
+  
+  for (const element of formElements) {
+    try {
+      const locator = page.locator(element.selector);
+      const isVisible = await locator.isVisible({ timeout: 1000 }).catch(() => false);
+      const isEnabled = isVisible ? await locator.isEnabled().catch(() => false) : false;
+      const value = isVisible ? await locator.inputValue().catch(() => 'N/A') : 'N/A';
+      
+      const status = isVisible ? (isEnabled ? '✅' : '🔒') : '❌';
+      console.log(`   ${status} ${element.name} (${element.selector}): ${isVisible ? 'visible' : 'not found'}${isEnabled ? ', enabled' : ''}${value !== 'N/A' && value ? `, value: "${value}"` : ''}`);
+    } catch (error) {
+      console.log(`   ⚠️ ${element.name}: Error checking - ${error.message}`);
+    }
   }
 }
 
@@ -267,7 +369,126 @@ async function retryOperation<T>(
   throw lastError;
 }
 
-// Enhanced retry for form submissions with user agent rotation
+// Human-like form submission with prevention-first approach
+async function submitFormWithHumanBehavior(
+  page: Page,
+  userInfo: UserInfo,
+  showName: string,
+  entryIndex: number
+): Promise<void> {
+  // Capture initial form state with comprehensive debugging
+  await capturePageState(page, showName, 'form-initial', entryIndex);
+
+  // Validate form elements exist using actual HTML IDs
+  const formElements = {
+    firstName: page.locator("#dlslot_name_first"),
+    lastName: page.locator("#dlslot_name_last"),
+    tickets: page.locator("#dlslot_ticket_qty"),
+    email: page.locator("#dlslot_email"),
+    zip: page.locator("#dlslot_zip"),
+    country: page.locator("#dlslot_country"),
+    agree: page.locator("#dlslot_agree"),
+    submit: page.locator('input[type="submit"]')
+  };
+
+  // Check if required elements exist (fail fast if not)
+  await Promise.all([
+    formElements.firstName.waitFor({ timeout: 10000 }),
+    formElements.lastName.waitFor({ timeout: 10000 }),
+    formElements.email.waitFor({ timeout: 10000 })
+  ]);
+
+  // More human-like behavior: pause and "read" the form
+  console.log(`📝 Reading form for ${showName} entry ${entryIndex}...`);
+  await page.waitForTimeout(2000 + Math.random() * 3000);
+  await addHumanBehavior(page);
+  
+  // Fill out the form with very human-like delays
+  await formElements.firstName.click();
+  await page.waitForTimeout(300 + Math.random() * 500);
+  await formElements.firstName.fill(userInfo.firstName);
+  await page.waitForTimeout(500 + Math.random() * 800);
+  
+  await formElements.lastName.click();
+  await page.waitForTimeout(250 + Math.random() * 400);
+  await formElements.lastName.fill(userInfo.lastName);
+  await page.waitForTimeout(400 + Math.random() * 600);
+  
+  await formElements.tickets.click();
+  await page.waitForTimeout(200 + Math.random() * 300);
+  await formElements.tickets.selectOption(userInfo.numberOfTickets);
+  await page.waitForTimeout(400 + Math.random() * 600);
+  
+  await formElements.email.click();
+  await page.waitForTimeout(300 + Math.random() * 500);
+  await formElements.email.fill(userInfo.email);
+  await page.waitForTimeout(500 + Math.random() * 700);
+
+  // Enter Date of Birth with realistic human delays
+  const dobMonth = page.locator("#dlslot_dob_month");
+  const dobDay = page.locator("#dlslot_dob_day");
+  const dobYear = page.locator("#dlslot_dob_year");
+  
+  await dobMonth.waitFor({ timeout: 5000 });
+  await dobMonth.click();
+  await page.waitForTimeout(200 + Math.random() * 300);
+  await dobMonth.fill(userInfo.dateOfBirth.month);
+  await page.waitForTimeout(300 + Math.random() * 400);
+  
+  await dobDay.click();
+  await page.waitForTimeout(150 + Math.random() * 250);
+  await dobDay.fill(userInfo.dateOfBirth.day);
+  await page.waitForTimeout(250 + Math.random() * 350);
+  
+  await dobYear.click();
+  await page.waitForTimeout(200 + Math.random() * 300);
+  await dobYear.fill(userInfo.dateOfBirth.year);
+  await page.waitForTimeout(400 + Math.random() * 600);
+
+  await formElements.zip.click();
+  await page.waitForTimeout(250 + Math.random() * 400);
+  await formElements.zip.fill(userInfo.zip);
+  await page.waitForTimeout(300 + Math.random() * 500);
+  
+  await formElements.country.click();
+  await page.waitForTimeout(200 + Math.random() * 400);
+  // Use the actual option values from HTML: USA=2, CANADA=3, OTHER=5
+  const countryValue = userInfo.countryOfResidence === 'USA' ? '2' : 
+                      userInfo.countryOfResidence === 'CANADA' ? '3' : '5';
+  await formElements.country.selectOption(countryValue);
+  await page.waitForTimeout(400 + Math.random() * 600);
+
+  // Human behavior: "review" the form before agreeing
+  console.log(`👀 Reviewing form for ${showName} entry ${entryIndex}...`);
+  await addHumanBehavior(page);
+  await page.waitForTimeout(1000 + Math.random() * 2000);
+  
+  // Agree to terms
+  await formElements.agree.click({ force: true });
+  await page.waitForTimeout(800 + Math.random() * 1200);
+
+  // Capture form state before submission
+  await capturePageState(page, showName, 'form-filled', entryIndex);
+
+  // Check for dry run mode
+  if (process.env.DRY_RUN === 'true') {
+    console.log(`[DRY RUN] Would submit entry ${entryIndex} for ${showName} (skipping actual submission)`);
+  } else {
+    // Final human pause before submitting
+    console.log(`🎯 Submitting entry ${entryIndex} for ${showName}...`);
+    await page.waitForTimeout(500 + Math.random() * 1000);
+    
+    // Submit the form
+    await formElements.submit.click();
+    console.log(`📤 Submit button clicked for ${showName} entry ${entryIndex}`);
+    
+    // Wait for potential redirect or confirmation and capture result
+    await page.waitForTimeout(3000 + Math.random() * 2000);
+    await capturePageState(page, showName, 'form-submitted', entryIndex);
+  }
+}
+
+// Enhanced retry for form submissions with user agent rotation (legacy function for backward compatibility)
 async function retryFormSubmission<T>(
   operation: (page: Page) => Promise<T>,
   page: Page,
@@ -386,11 +607,8 @@ export async function broadwayDirect({
     // Handle any modals on the show landing page
     await dismissEmailModal(page);
     
-    // Take screenshot after modal dismissal
-    await page.screenshot({ 
-      path: join(screenshotsDir, `${showName}-post-modal-${Date.now()}.png`),
-      fullPage: true 
-    });
+    // Capture landing page state after modal handling
+    await capturePageState(page, showName, 'landing-ready');
 
     // Check for Cloudflare challenge after navigation
     console.log(`Checking for Cloudflare challenge on ${showName} page...`);
@@ -425,11 +643,8 @@ export async function broadwayDirect({
         console.log(`ℹ️  ${showName}: All ${totalClosedCount} lotteries are closed/upcoming`);
       } else {
         console.log(`ℹ️  ${showName}: No lotteries found on page`);
-        // Take screenshot when no lotteries found
-        await page.screenshot({ 
-          path: join(screenshotsDir, `${showName}-no-lotteries-${Date.now()}.png`),
-          fullPage: true 
-        });
+        // Capture detailed state when no lotteries found for debugging
+        await capturePageState(page, showName, 'no-lotteries');
       }
       
       // Log summary for all closed
@@ -478,174 +693,60 @@ export async function broadwayDirect({
       console.log(`Processing entry ${i + 1}/${hrefs.length} for ${showName}`);
       
       try {
-        // Use enhanced retry logic for the entire entry submission process
-        await retryFormSubmission(async () => {
-          // Navigate to entry form with enhanced delay
-          await page.waitForTimeout(2000 + Math.random() * 3000); // Pre-navigation delay
-          await page.goto(href, { waitUntil: 'domcontentloaded' });
+        // Navigate to entry form with human-like delay
+        console.log(`🎯 Navigating to entry ${i + 1} for ${showName}...`);
+        await page.waitForTimeout(3000 + Math.random() * 4000); // More human-like pre-navigation delay
+        
+        await retryOperation(
+          () => page.goto(href, { waitUntil: 'domcontentloaded' }),
+          `Navigate to ${showName} entry ${i + 1}`
+        );
+        
+        // FAIL FAST: Check for Cloudflare challenge - if detected, our approach is wrong
+        if (await isCloudflareChallenge(page)) {
+          console.log(`🚫 CLOUDFLARE CHALLENGE DETECTED for ${showName} entry ${i + 1}`);
+          await capturePageState(page, showName, 'cloudflare', i + 1);
           
-          // Check for Cloudflare challenge immediately after navigation
-          if (await isCloudflareChallenge(page)) {
-            console.log(`🚫 Cloudflare challenge detected for ${showName} entry ${i + 1}`);
-            await page.screenshot({ 
-              path: join(screenshotsDir, `${showName}-cloudflare-${i}-${Date.now()}.png`),
-              fullPage: true 
-            });
-            
-            // Wait for potential challenge completion (but don't wait forever)
-            console.log('⏳ Waiting for Cloudflare challenge to resolve...');
-            await page.waitForTimeout(15000); // Give Cloudflare time to process
-            
-            // Check again if we're past the challenge
-            if (await isCloudflareChallenge(page)) {
-              throw new Error(`Cloudflare challenge persists for ${showName} entry ${i + 1}`);
+          // Don't retry - this means our automation behavior is detectable
+          throw new Error(`Cloudflare challenge detected - automation behavior needs adjustment for ${showName} entry ${i + 1}`);
+        }
+        
+        // Capture navigation success state
+        await capturePageState(page, showName, 'entry-navigated', i + 1);
+        
+        // Handle any modals on the form page
+        await dismissEmailModal(page);
+        
+        // Handle potential cookie banners quietly
+        try {
+          const cookieSelectors = [
+            '[id*="cookie"] button:has-text("Accept")',
+            '[id*="cookie"] button:has-text("OK")', 
+            '[id*="cookie"] button:has-text("Agree")',
+            '[class*="cookie"] button',
+            'button:has-text("Accept Cookies")'
+          ];
+          
+          for (const selector of cookieSelectors) {
+            const cookieBtn = page.locator(selector).first();
+            if (await cookieBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+              await cookieBtn.click();
+              console.log(`Dismissed cookie banner for ${showName}`);
+              break;
             }
-            
-            console.log('✅ Cloudflare challenge resolved');
           }
-          
-          // Handle any modals on the form page
-          await dismissEmailModal(page);
-          
-          // Add human behavior after potential challenge
-          await addHumanBehavior(page);
-          await page.waitForTimeout(1000 + Math.random() * 2000);
-          
-          // Handle potential cookie banners
-          try {
-            // Common cookie banner selectors
-            const cookieSelectors = [
-              '[id*="cookie"] button:has-text("Accept")',
-              '[id*="cookie"] button:has-text("OK")', 
-              '[id*="cookie"] button:has-text("Agree")',
-              '[class*="cookie"] button',
-              'button:has-text("Accept Cookies")'
-            ];
-            
-            for (const selector of cookieSelectors) {
-              const cookieBtn = page.locator(selector).first();
-              if (await cookieBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-                await cookieBtn.click();
-                console.log(`Dismissed cookie banner for ${showName}`);
-                break;
-              }
-            }
-          } catch (error) {
-            // Cookie handling is optional, continue if it fails
-            console.log(`No cookie banner found for ${showName}`);
-          }
+        } catch (error) {
+          // Cookie handling is optional, continue if it fails
+        }
 
-          // Take screenshot of form page
-          await page.screenshot({ 
-            path: join(screenshotsDir, `${showName}-form-${i}-${Date.now()}.png`),
-            fullPage: true 
-          });
-
-          // Validate form elements exist
-          const formElements = {
-            firstName: page.getByLabel("First Name"),
-            lastName: page.getByLabel("Last Name"),
-            tickets: page.getByLabel("Qty of Tickets Requested"),
-            email: page.getByLabel("Email"),
-            zip: page.getByLabel("Zip"),
-            country: page.getByLabel("Country of Residence"),
-            agree: page.locator("#dlslot_agree"),
-            submit: page.getByLabel("Enter")
-          };
-
-          // Check if required elements exist
-          await Promise.all([
-            formElements.firstName.waitFor({ timeout: 5000 }),
-            formElements.lastName.waitFor({ timeout: 5000 }),
-            formElements.email.waitFor({ timeout: 5000 })
-          ]);
-
-          // Add human-like behavior before filling form
-          await addHumanBehavior(page);
-          
-          // Fill out the form with human-like typing and random delays
-          await formElements.firstName.click();
-          await page.waitForTimeout(200 + Math.random() * 300);
-          await formElements.firstName.fill(userInfo.firstName);
-          await page.waitForTimeout(300 + Math.random() * 500);
-          
-          await formElements.lastName.click();
-          await page.waitForTimeout(150 + Math.random() * 250);
-          await formElements.lastName.fill(userInfo.lastName);
-          await page.waitForTimeout(200 + Math.random() * 400);
-          
-          await formElements.tickets.click();
-          await page.waitForTimeout(100 + Math.random() * 200);
-          await formElements.tickets.selectOption(userInfo.numberOfTickets);
-          await page.waitForTimeout(250 + Math.random() * 350);
-          
-          await formElements.email.click();
-          await page.waitForTimeout(180 + Math.random() * 320);
-          await formElements.email.fill(userInfo.email);
-          await page.waitForTimeout(200 + Math.random() * 400);
-
-          // Enter Date of Birth with human-like delays
-          const dobMonth = page.locator("#dlslot_dob_month");
-          const dobDay = page.locator("#dlslot_dob_day");
-          const dobYear = page.locator("#dlslot_dob_year");
-          
-          await dobMonth.waitFor({ timeout: 5000 });
-          await dobMonth.click();
-          await page.waitForTimeout(120 + Math.random() * 180);
-          await dobMonth.fill(userInfo.dateOfBirth.month);
-          await page.waitForTimeout(150 + Math.random() * 250);
-          
-          await dobDay.click();
-          await page.waitForTimeout(100 + Math.random() * 150);
-          await dobDay.fill(userInfo.dateOfBirth.day);
-          await page.waitForTimeout(120 + Math.random() * 200);
-          
-          await dobYear.click();
-          await page.waitForTimeout(110 + Math.random() * 160);
-          await dobYear.fill(userInfo.dateOfBirth.year);
-          await page.waitForTimeout(200 + Math.random() * 300);
-
-          await formElements.zip.click();
-          await page.waitForTimeout(130 + Math.random() * 220);
-          await formElements.zip.fill(userInfo.zip);
-          await page.waitForTimeout(180 + Math.random() * 280);
-          
-          await formElements.country.click();
-          await page.waitForTimeout(150 + Math.random() * 250);
-          await formElements.country.selectOption({ label: userInfo.countryOfResidence });
-          await page.waitForTimeout(200 + Math.random() * 300);
-
-          // Add another human behavior before final actions
-          await addHumanBehavior(page);
-          
-          // Agree to terms with human-like delay
-          await formElements.agree.click({ force: true });
-          await page.waitForTimeout(400 + Math.random() * 600);
-
-          // Take screenshot before submission
-          await page.screenshot({ 
-            path: join(screenshotsDir, `${showName}-before-submit-${i}-${Date.now()}.png`),
-            fullPage: true 
-          });
-
-          // Check for dry run mode
-          if (process.env.DRY_RUN === 'true') {
-            console.log(`[DRY RUN] Would submit entry ${i + 1} for ${showName} (skipping actual submission)`);
-          } else {
-            // Submit the form
-            await formElements.submit.click();
-            // Wait for potential redirect or confirmation
-            await page.waitForTimeout(2000);
-          }
-        }, `Submit entry ${i + 1} for ${showName}`);
+        // Use the new human-like form submission approach
+        await submitFormWithHumanBehavior(page, userInfo, showName, i + 1);
         
         successCount++;
         console.log(`✅ Successfully submitted entry ${i + 1} for ${showName}`);
 
-        // Wait for a configurable random timeout to avoid spamming
-        const delay = getRandomDelay();
-        console.log(`Waiting ${delay}ms before next entry...`);
-        await page.waitForTimeout(delay);
+        // Human-like delay before next entry
+        await waitBetweenEntries(showName, i + 1);
         
       } catch (entryError) {
         failureCount++;
@@ -661,14 +762,11 @@ export async function broadwayDirect({
           console.error(`❌ Failed to submit entry ${i + 1} for ${showName} after ${CONFIG.MAX_RETRIES + 1} attempts: ${errorMessage}`);
         }
         
-        // Take error screenshot
+        // Capture error state with detailed debugging
         try {
-          await page.screenshot({ 
-            path: join(screenshotsDir, `${showName}-error-${i}-${Date.now()}.png`),
-            fullPage: true 
-          });
+          await capturePageState(page, showName, 'error', i + 1);
         } catch (screenshotError) {
-          console.warn(`Could not capture error screenshot: ${screenshotError.message}`);
+          console.warn(`Could not capture error state: ${screenshotError.message}`);
         }
         
         // Continue with next entry instead of failing completely
@@ -688,14 +786,11 @@ export async function broadwayDirect({
     failureCount = totalEntries; // Count all as failures if fatal error
     console.error(`💥 Fatal error processing ${showName}: ${error.message}`);
     
-    // Take error screenshot
+    // Capture fatal error state with debugging info
     try {
-      await page.screenshot({ 
-        path: join(screenshotsDir, `${showName}-fatal-error-${Date.now()}.png`),
-        fullPage: true 
-      });
+      await capturePageState(page, showName, 'fatal-error');
     } catch (screenshotError) {
-      console.warn(`Could not capture fatal error screenshot: ${screenshotError.message}`);
+      console.warn(`Could not capture fatal error state: ${screenshotError.message}`);
     }
     
     // Log final summary even on fatal error
