@@ -453,30 +453,29 @@ async function submitFormWithHumanBehavior(
 
   // More human-like behavior: pause and "read" the form
   console.log(`📝 Reading form for ${showName} entry ${entryIndex}...`);
-  // DISABLED: Form reading delay and behavior for Camoufox native testing
-  // await page.waitForTimeout(2000 + Math.random() * 3000);
-  // await addHumanBehavior(page);
+  // Quick form reading pause (1-2 seconds)
+  await page.waitForTimeout(1000 + Math.random() * 1000);
   
-  // Fill out the form - DISABLED delays for Camoufox native testing
+  // Fill out the form - Fast but natural delays (100-200ms between fields)
   await formElements.firstName.click();
-  // await page.waitForTimeout(300 + Math.random() * 500);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await formElements.firstName.fill(userInfo.firstName);
-  // await page.waitForTimeout(500 + Math.random() * 800);
+  await page.waitForTimeout(150 + Math.random() * 150);
   
   await formElements.lastName.click();
-  // await page.waitForTimeout(250 + Math.random() * 400);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await formElements.lastName.fill(userInfo.lastName);
-  // await page.waitForTimeout(400 + Math.random() * 600);
+  await page.waitForTimeout(150 + Math.random() * 150);
   
   await formElements.tickets.click();
-  await page.waitForTimeout(200 + Math.random() * 300);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await formElements.tickets.selectOption(userInfo.numberOfTickets);
-  await page.waitForTimeout(400 + Math.random() * 600);
+  await page.waitForTimeout(150 + Math.random() * 150);
   
   await formElements.email.click();
-  // await page.waitForTimeout(300 + Math.random() * 500);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await formElements.email.fill(userInfo.email);
-  // await page.waitForTimeout(500 + Math.random() * 700);
+  await page.waitForTimeout(150 + Math.random() * 150);
 
   // Enter Date of Birth with realistic human delays
   const dobMonth = page.locator("#dlslot_dob_month");
@@ -485,41 +484,40 @@ async function submitFormWithHumanBehavior(
   
   await dobMonth.waitFor({ timeout: 5000 });
   await dobMonth.click();
-  // await page.waitForTimeout(200 + Math.random() * 300);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await dobMonth.fill(userInfo.dateOfBirth.month);
-  // await page.waitForTimeout(300 + Math.random() * 400);
+  await page.waitForTimeout(150 + Math.random() * 150);
   
   await dobDay.click();
-  // await page.waitForTimeout(150 + Math.random() * 250);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await dobDay.fill(userInfo.dateOfBirth.day);
-  // await page.waitForTimeout(250 + Math.random() * 350);
+  await page.waitForTimeout(150 + Math.random() * 150);
   
   await dobYear.click();
-  // await page.waitForTimeout(200 + Math.random() * 300);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await dobYear.fill(userInfo.dateOfBirth.year);
-  // await page.waitForTimeout(400 + Math.random() * 600);
+  await page.waitForTimeout(150 + Math.random() * 150);
 
   await formElements.zip.click();
-  // await page.waitForTimeout(250 + Math.random() * 400);
+  await page.waitForTimeout(100 + Math.random() * 100);
   await formElements.zip.fill(userInfo.zip);
-  // await page.waitForTimeout(300 + Math.random() * 500);
+  await page.waitForTimeout(150 + Math.random() * 150);
   
   await formElements.country.click();
-  // await page.waitForTimeout(200 + Math.random() * 400);
+  await page.waitForTimeout(100 + Math.random() * 100);
   // Use the actual option values from HTML: USA=2, CANADA=3, OTHER=5
   const countryValue = userInfo.countryOfResidence === 'USA' ? '2' : 
                       userInfo.countryOfResidence === 'CANADA' ? '3' : '5';
   await formElements.country.selectOption(countryValue);
-  await page.waitForTimeout(400 + Math.random() * 600);
+  await page.waitForTimeout(150 + Math.random() * 150);
 
-  // DISABLED: Form review behavior for Camoufox native testing
-  console.log(`👀 Reviewing form for ${showName} entry ${entryIndex}...`);
-  // await addHumanBehavior(page);
-  // await page.waitForTimeout(1000 + Math.random() * 2000);
+  // Quick form review
+  console.log(`👀 Quick review for ${showName} entry ${entryIndex}...`);
+  await page.waitForTimeout(500 + Math.random() * 500); // 0.5-1 second review
   
   // Agree to terms
   await formElements.agree.click({ force: true });
-  // await page.waitForTimeout(800 + Math.random() * 1200);
+  await page.waitForTimeout(300 + Math.random() * 200); // Quick pause after agreeing
 
   // Capture form state before submission
   await capturePageState(page, showName, 'form-filled', entryIndex);
@@ -528,17 +526,16 @@ async function submitFormWithHumanBehavior(
   if (process.env.DRY_RUN === 'true') {
     console.log(`[DRY RUN] Would submit entry ${entryIndex} for ${showName} (skipping actual submission)`);
   } else {
-    // DISABLED: Final pause before submitting for Camoufox native testing
+    // Quick final pause before submission
     console.log(`🎯 Submitting entry ${entryIndex} for ${showName}...`);
-    // await page.waitForTimeout(500 + Math.random() * 1000);
+    await page.waitForTimeout(300 + Math.random() * 300); // 0.3-0.6 seconds
     
     // Submit the form
     await formElements.submit.click();
     console.log(`📤 Submit button clicked for ${showName} entry ${entryIndex}`);
     
-    // DISABLED: Wait after submission for Camoufox native testing
-    // await page.waitForTimeout(3000 + Math.random() * 2000);
-    await page.waitForTimeout(2000); // Minimal wait for page processing
+    // Wait for submission processing
+    await page.waitForTimeout(2000); // 2 seconds for page processing
     await capturePageState(page, showName, 'form-submitted', entryIndex);
   }
 }
@@ -701,10 +698,15 @@ export async function broadwayDirect({
       }
     }
     
-    // DISABLED: Human behavior simulation for Camoufox native testing
-    // await simulateHumanLandingPageBehavior(page, showName);
+    // Minimal landing page behavior to avoid detection (5-10 seconds)
+    console.log(`📖 Quick landing page interaction for ${showName}...`);
+    await page.waitForTimeout(5000 + Math.random() * 5000); // 5-10 seconds
     
-    // Capture state after navigation (no human behavior simulation)
+    // Single quick scroll to simulate reading
+    await page.evaluate(() => window.scrollBy(0, 200));
+    await page.waitForTimeout(500);
+    
+    // Capture state after navigation
     await capturePageState(page, showName, 'post-navigation');
     
     console.log(`✅ Found ${enterNowButtons.length} open lottery entries for ${showName}`);
@@ -729,11 +731,11 @@ export async function broadwayDirect({
         // Use direct navigation for reliability
         console.log(`🎯 Navigating directly to entry ${i + 1} for ${showName}...`);
         
-        // DISABLED: Inter-entry delay for Camoufox native testing
-        // if (i > 0) {
-        //   console.log(`⏸️ Brief pause between entries for ${showName}...`);
-        //   await page.waitForTimeout(3000 + Math.random() * 5000); // 3-8 seconds between entries
-        // }
+        // Strategic entry delay (only between multiple entries, 2-3 seconds)
+        if (i > 0) {
+          console.log(`⏸️ Quick pause between entries for ${showName}...`);
+          await page.waitForTimeout(2000 + Math.random() * 1000); // 2-3 seconds between entries
+        }
         
         // Direct navigation to the form URL
         await page.goto(href, { waitUntil: 'domcontentloaded' });
