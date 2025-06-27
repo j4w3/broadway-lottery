@@ -20,7 +20,7 @@
   "devDependencies": {
     "@playwright/test": "^1.53.1",
     "@types/node": "^22.10.7",
-    "camoufox-js": "^0.4.3",
+    "camoufox-js": "^0.4.1",
     "dotenv": "^16.5.0",
     "playwright-core": "^1.53.1",
     "typescript": "^5.8.3"
