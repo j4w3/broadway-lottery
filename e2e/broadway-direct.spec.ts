@@ -50,19 +50,19 @@ test.describe.serial('Broadway lottery entries', () => {
 
   shuffledUrls.forEach((url, index) => {
     test(`Sign up at ${url}`, async () => {
-      // Smart delay strategy: delay every 3 shows to break up patterns
-      if (index > 0 && index % 3 === 0) {
-        const groupDelay = 60000 + Math.random() * 60000; // 1-2 minutes between groups
-        console.log(`⏸️ Group delay after ${index} shows: ${(groupDelay/1000).toFixed(1)}s`);
-        await new Promise(resolve => setTimeout(resolve, groupDelay));
-      }
+      // DISABLED: Smart delay strategy for Camoufox native testing
+      // if (index > 0 && index % 3 === 0) {
+      //   const groupDelay = 60000 + Math.random() * 60000; // 1-2 minutes between groups
+      //   console.log(`⏸️ Group delay after ${index} shows: ${(groupDelay/1000).toFixed(1)}s`);
+      //   await new Promise(resolve => setTimeout(resolve, groupDelay));
+      // }
     const userInfo = getUserInfo(process.env);
     
-    // Add small random start delay to distribute load naturally (0-3 seconds)
-    const startDelay = Math.random() * 3000;
+    // DISABLED: Random start delay for Camoufox native testing
+    // const startDelay = Math.random() * 3000;
     const showName = url.match(/show\/([^\/]+)/)?.[1] || "unknown";
-    console.log(`🎭 [${showName}] Starting in ${(startDelay/1000).toFixed(1)}s...`);
-    await new Promise(resolve => setTimeout(resolve, startDelay));
+    console.log(`🎭 [${showName}] Starting immediately (Camoufox native test)...`);
+    // await new Promise(resolve => setTimeout(resolve, startDelay));
     
     // In CI, run headless; locally, run headful for debugging
     const headless = process.env.CI === 'true';

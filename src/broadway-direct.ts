@@ -179,8 +179,8 @@ async function simulateHumanLandingPageBehavior(page: Page, showName: string): P
       await page.mouse.wheel(0, scrollAmount);
       await page.waitForTimeout(1000 + Math.random() * 2000); // Pause to "read"
       
-      // Add random mouse movements while reading
-      await addHumanBehavior(page);
+      // DISABLED: Random mouse movements for Camoufox native testing
+      // await addHumanBehavior(page);
     }
     
     // Scroll back to top to see lottery options
@@ -453,19 +453,20 @@ async function submitFormWithHumanBehavior(
 
   // More human-like behavior: pause and "read" the form
   console.log(`📝 Reading form for ${showName} entry ${entryIndex}...`);
-  await page.waitForTimeout(2000 + Math.random() * 3000);
-  await addHumanBehavior(page);
+  // DISABLED: Form reading delay and behavior for Camoufox native testing
+  // await page.waitForTimeout(2000 + Math.random() * 3000);
+  // await addHumanBehavior(page);
   
-  // Fill out the form with very human-like delays
+  // Fill out the form - DISABLED delays for Camoufox native testing
   await formElements.firstName.click();
-  await page.waitForTimeout(300 + Math.random() * 500);
+  // await page.waitForTimeout(300 + Math.random() * 500);
   await formElements.firstName.fill(userInfo.firstName);
-  await page.waitForTimeout(500 + Math.random() * 800);
+  // await page.waitForTimeout(500 + Math.random() * 800);
   
   await formElements.lastName.click();
-  await page.waitForTimeout(250 + Math.random() * 400);
+  // await page.waitForTimeout(250 + Math.random() * 400);
   await formElements.lastName.fill(userInfo.lastName);
-  await page.waitForTimeout(400 + Math.random() * 600);
+  // await page.waitForTimeout(400 + Math.random() * 600);
   
   await formElements.tickets.click();
   await page.waitForTimeout(200 + Math.random() * 300);
@@ -473,9 +474,9 @@ async function submitFormWithHumanBehavior(
   await page.waitForTimeout(400 + Math.random() * 600);
   
   await formElements.email.click();
-  await page.waitForTimeout(300 + Math.random() * 500);
+  // await page.waitForTimeout(300 + Math.random() * 500);
   await formElements.email.fill(userInfo.email);
-  await page.waitForTimeout(500 + Math.random() * 700);
+  // await page.waitForTimeout(500 + Math.random() * 700);
 
   // Enter Date of Birth with realistic human delays
   const dobMonth = page.locator("#dlslot_dob_month");
@@ -484,41 +485,41 @@ async function submitFormWithHumanBehavior(
   
   await dobMonth.waitFor({ timeout: 5000 });
   await dobMonth.click();
-  await page.waitForTimeout(200 + Math.random() * 300);
+  // await page.waitForTimeout(200 + Math.random() * 300);
   await dobMonth.fill(userInfo.dateOfBirth.month);
-  await page.waitForTimeout(300 + Math.random() * 400);
+  // await page.waitForTimeout(300 + Math.random() * 400);
   
   await dobDay.click();
-  await page.waitForTimeout(150 + Math.random() * 250);
+  // await page.waitForTimeout(150 + Math.random() * 250);
   await dobDay.fill(userInfo.dateOfBirth.day);
-  await page.waitForTimeout(250 + Math.random() * 350);
+  // await page.waitForTimeout(250 + Math.random() * 350);
   
   await dobYear.click();
-  await page.waitForTimeout(200 + Math.random() * 300);
+  // await page.waitForTimeout(200 + Math.random() * 300);
   await dobYear.fill(userInfo.dateOfBirth.year);
-  await page.waitForTimeout(400 + Math.random() * 600);
+  // await page.waitForTimeout(400 + Math.random() * 600);
 
   await formElements.zip.click();
-  await page.waitForTimeout(250 + Math.random() * 400);
+  // await page.waitForTimeout(250 + Math.random() * 400);
   await formElements.zip.fill(userInfo.zip);
-  await page.waitForTimeout(300 + Math.random() * 500);
+  // await page.waitForTimeout(300 + Math.random() * 500);
   
   await formElements.country.click();
-  await page.waitForTimeout(200 + Math.random() * 400);
+  // await page.waitForTimeout(200 + Math.random() * 400);
   // Use the actual option values from HTML: USA=2, CANADA=3, OTHER=5
   const countryValue = userInfo.countryOfResidence === 'USA' ? '2' : 
                       userInfo.countryOfResidence === 'CANADA' ? '3' : '5';
   await formElements.country.selectOption(countryValue);
   await page.waitForTimeout(400 + Math.random() * 600);
 
-  // Human behavior: "review" the form before agreeing
+  // DISABLED: Form review behavior for Camoufox native testing
   console.log(`👀 Reviewing form for ${showName} entry ${entryIndex}...`);
-  await addHumanBehavior(page);
-  await page.waitForTimeout(1000 + Math.random() * 2000);
+  // await addHumanBehavior(page);
+  // await page.waitForTimeout(1000 + Math.random() * 2000);
   
   // Agree to terms
   await formElements.agree.click({ force: true });
-  await page.waitForTimeout(800 + Math.random() * 1200);
+  // await page.waitForTimeout(800 + Math.random() * 1200);
 
   // Capture form state before submission
   await capturePageState(page, showName, 'form-filled', entryIndex);
@@ -527,16 +528,17 @@ async function submitFormWithHumanBehavior(
   if (process.env.DRY_RUN === 'true') {
     console.log(`[DRY RUN] Would submit entry ${entryIndex} for ${showName} (skipping actual submission)`);
   } else {
-    // Final human pause before submitting
+    // DISABLED: Final pause before submitting for Camoufox native testing
     console.log(`🎯 Submitting entry ${entryIndex} for ${showName}...`);
-    await page.waitForTimeout(500 + Math.random() * 1000);
+    // await page.waitForTimeout(500 + Math.random() * 1000);
     
     // Submit the form
     await formElements.submit.click();
     console.log(`📤 Submit button clicked for ${showName} entry ${entryIndex}`);
     
-    // Wait for potential redirect or confirmation and capture result
-    await page.waitForTimeout(3000 + Math.random() * 2000);
+    // DISABLED: Wait after submission for Camoufox native testing
+    // await page.waitForTimeout(3000 + Math.random() * 2000);
+    await page.waitForTimeout(2000); // Minimal wait for page processing
     await capturePageState(page, showName, 'form-submitted', entryIndex);
   }
 }
@@ -563,8 +565,8 @@ async function retryFormSubmission<T>(
         console.log(`Retrying in ${delay.toFixed(0)}ms with fresh session...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         
-        // Add extra human behavior between retries
-        await addHumanBehavior(page);
+        // DISABLED: Extra human behavior between retries for Camoufox native testing
+        // await addHumanBehavior(page);
       }
     }
   }
@@ -589,8 +591,9 @@ export async function broadwayDirect({
     javaScriptEnabled: true,
   });
   
-  // Simulate tab behavior for more natural browsing
-  const page = await simulateTabBehavior(context);
+  // DISABLED: Multi-tab browsing simulation for Camoufox native testing  
+  // const page = await simulateTabBehavior(context);
+  const page = await context.newPage();
   
   // Set page timeouts
   page.setDefaultTimeout(CONFIG.PAGE_TIMEOUT);
@@ -623,9 +626,9 @@ export async function broadwayDirect({
           await page.waitForLoadState('networkidle');
           navigatedViaClick = true;
           
-          // Add natural delay after click
-          await page.waitForTimeout(2000 + Math.random() * 3000);
-          await addHumanBehavior(page);
+          // DISABLED: Natural delay and behavior after click for Camoufox native testing
+          // await page.waitForTimeout(2000 + Math.random() * 3000);
+          // await addHumanBehavior(page);
         }
       } catch (e) {
         console.log('Show link not found, using direct navigation');
@@ -698,11 +701,11 @@ export async function broadwayDirect({
       }
     }
     
-    // CRITICAL: Add realistic human behavior before attempting lottery entries
-    await simulateHumanLandingPageBehavior(page, showName);
+    // DISABLED: Human behavior simulation for Camoufox native testing
+    // await simulateHumanLandingPageBehavior(page, showName);
     
-    // Capture state after human behavior simulation
-    await capturePageState(page, showName, 'post-human-behavior');
+    // Capture state after navigation (no human behavior simulation)
+    await capturePageState(page, showName, 'post-navigation');
     
     console.log(`✅ Found ${enterNowButtons.length} open lottery entries for ${showName}`);
 
@@ -714,26 +717,32 @@ export async function broadwayDirect({
         // Use human-like button clicking approach instead of direct navigation
         console.log(`🎯 Using human-like approach for entry ${i + 1} for ${showName}...`);
         
-        // Add inter-entry delay if this isn't the first entry
-        if (i > 0) {
-          console.log(`⏸️ Brief pause between entries for ${showName}...`);
-          await page.waitForTimeout(3000 + Math.random() * 5000); // 3-8 seconds between entries
-        }
+        // DISABLED: Inter-entry delay for Camoufox native testing
+        // if (i > 0) {
+        //   console.log(`⏸️ Brief pause between entries for ${showName}...`);
+        //   await page.waitForTimeout(3000 + Math.random() * 5000); // 3-8 seconds between entries
+        // }
         
-        // Click the button using human-like behavior
-        const href = await clickEnterButtonWithHumanBehavior(page, showName, i);
+        // DISABLED: Human-like button clicking for Camoufox native testing
+        // const href = await clickEnterButtonWithHumanBehavior(page, showName, i);
+        
+        // Standard button clicking
+        const enterButtons = await page.getByRole("link", { name: /Enter Now/i }).all();
+        if (i >= enterButtons.length) {
+          throw new Error(`Button ${i + 1} not found`);
+        }
+        await enterButtons[i].click();
+        console.log(`🖱️ Clicked Enter Now button ${i + 1} for ${showName}`);
         
         // Wait for navigation to complete
         await page.waitForLoadState('domcontentloaded');
         console.log(`📍 Navigation completed for ${showName} entry ${i + 1}`);
         
-        // FAIL FAST: Check for Cloudflare challenge - if detected, our approach is wrong
+        // Check for Cloudflare challenge
         if (await isCloudflareChallenge(page)) {
           console.log(`🚫 CLOUDFLARE CHALLENGE DETECTED for ${showName} entry ${i + 1}`);
           await capturePageState(page, showName, 'cloudflare', i + 1);
-          
-          // Don't retry - this means our automation behavior is detectable
-          throw new Error(`Cloudflare challenge detected - automation behavior needs adjustment for ${showName} entry ${i + 1}`);
+          throw new Error(`Cloudflare challenge detected for ${showName} entry ${i + 1}`);
         }
         
         // Capture navigation success state
