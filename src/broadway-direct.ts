@@ -709,13 +709,25 @@ export async function broadwayDirect({
     
     console.log(`✅ Found ${enterNowButtons.length} open lottery entries for ${showName}`);
 
+    // Extract hrefs from Enter Now buttons for direct navigation
+    const hrefs = await Promise.all(
+      enterNowButtons.map(button => button.getAttribute('href'))
+    );
+    console.log(`📍 Extracted ${hrefs.filter(h => h).length} valid entry URLs for ${showName}`);
+
     // Process each lottery entry with enhanced human behavior
-    for (let i = 0; i < enterNowButtons.length; i++) {
-      console.log(`Processing entry ${i + 1}/${enterNowButtons.length} for ${showName}`);
+    for (let i = 0; i < hrefs.length; i++) {
+      const href = hrefs[i];
+      if (!href) {
+        console.log(`⚠️ Skipping entry ${i + 1} for ${showName} - no href found`);
+        continue;
+      }
+      
+      console.log(`Processing entry ${i + 1}/${hrefs.length} for ${showName}`);
       
       try {
-        // Use human-like button clicking approach instead of direct navigation
-        console.log(`🎯 Using human-like approach for entry ${i + 1} for ${showName}...`);
+        // Use direct navigation for reliability
+        console.log(`🎯 Navigating directly to entry ${i + 1} for ${showName}...`);
         
         // DISABLED: Inter-entry delay for Camoufox native testing
         // if (i > 0) {
@@ -723,19 +735,8 @@ export async function broadwayDirect({
         //   await page.waitForTimeout(3000 + Math.random() * 5000); // 3-8 seconds between entries
         // }
         
-        // DISABLED: Human-like button clicking for Camoufox native testing
-        // const href = await clickEnterButtonWithHumanBehavior(page, showName, i);
-        
-        // Standard button clicking
-        const enterButtons = await page.getByRole("link", { name: /Enter Now/i }).all();
-        if (i >= enterButtons.length) {
-          throw new Error(`Button ${i + 1} not found`);
-        }
-        await enterButtons[i].click();
-        console.log(`🖱️ Clicked Enter Now button ${i + 1} for ${showName}`);
-        
-        // Wait for navigation to complete
-        await page.waitForLoadState('domcontentloaded');
+        // Direct navigation to the form URL
+        await page.goto(href, { waitUntil: 'domcontentloaded' });
         console.log(`📍 Navigation completed for ${showName} entry ${i + 1}`);
         
         // Check for Cloudflare challenge
